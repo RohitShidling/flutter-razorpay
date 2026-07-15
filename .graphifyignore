@@ -1,0 +1,38 @@
+# Flutter
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Dependencies
+node_modules/
+ios/Pods/
+android/.gradle/
+
+# Generated output
+graphify-out/
+
+# Git
+.git/
+
+# Docs & media
+*.md
+*.pdf
+*.txt
+*.html
+*.htm
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+
+# Secrets
+.env
+.env.*
+
+# Lock files
+package-lock.json
+pubspec.lock

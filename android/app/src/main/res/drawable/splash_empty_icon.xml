@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ masks this into a circle. Opaque white matches the splash background so
+     the circle is invisible; fully transparent icons can prevent the background from showing. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <size
+        android:width="24dp"
+        android:height="24dp" />
+    <solid android:color="#FFFFFF" />
+</shape>
