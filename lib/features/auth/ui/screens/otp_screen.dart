@@ -41,7 +41,10 @@ class _OtpScreenState extends State<OtpScreen> {
     if (!mounted) return;
     setState(() {});
     final code = _otpController.text.trim();
-    if (code.length == 6 && !_autoSubmitting && _authProvider.state != AuthState.loading) {
+    if (code.length == 6 &&
+        !_autoSubmitting &&
+        _authProvider.state != AuthState.loading &&
+        _authProvider.state != AuthState.authenticated) {
       _autoSubmitting = true;
       Future.microtask(() async {
         await _submit();
@@ -80,7 +83,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   Future<void> _submit() async {
     final provider = Provider.of<AuthProvider>(context, listen: false);
-    if (provider.state == AuthState.loading) return;
+    if (provider.state == AuthState.loading || provider.state == AuthState.authenticated) return;
 
     if (_otpController.text.trim().length < 6) {
       ErrorHandler.showError(context, 'Please enter the complete 6-digit code');
@@ -231,6 +234,7 @@ class _OtpScreenState extends State<OtpScreen> {
                             child: Opacity(
                               opacity: 0,
                               child: TextFormField(
+                                enabled: !isLoading && provider.state != AuthState.authenticated,
                                 controller: _otpController,
                                 focusNode: _otpFocusNode,
                                 autofocus: true,
@@ -333,7 +337,7 @@ class _OtpScreenState extends State<OtpScreen> {
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: (isLoading || !isComplete) ? null : _submit,
+                              onPressed: (isLoading || provider.state == AuthState.authenticated || !isComplete) ? null : _submit,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryColor,
                                 foregroundColor: Colors.white,
