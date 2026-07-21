@@ -10,7 +10,7 @@ class SecureStorage {
             synchronizable: false,
           ),
           aOptions: AndroidOptions(
-            encryptedSharedPreferences: true,
+            // encryptedSharedPreferences is deprecated in newer flutter_secure_storage and can be removed
           ),
         );
 

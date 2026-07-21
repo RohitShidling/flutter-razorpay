@@ -52,14 +52,54 @@ import 'package:meal_app/features/quick_service/data/repositories/quick_service_
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/core/network/referral_repository.dart';
 import 'package:meal_app/features/profile/providers/referral_provider.dart';
+import 'package:meal_app/core/network/notification_repository.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:meal_app/firebase_options.dart';
+import 'package:meal_app/core/services/local_notification_service.dart';
+import 'package:meal_app/core/services/firebase_messaging_service.dart';
+import 'package:meal_app/core/providers/notification_provider.dart';
+import 'package:meal_app/features/announcements/ui/screens/notifications_screen.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 
 void main() async {
+  // 1. Flutter binding
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. Firebase initialization
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Catch initialization errors in production to avoid crashing startup
+  }
+
+  // 3. Local notifications
+  try {
+    await LocalNotificationService().init();
+  } catch (e) {
+    // Handle local notification init failure gracefully
+  }
+
+  // 4. Firebase messaging
+  try {
+    await FirebaseMessagingService().init(
+      LocalNotificationService(),
+    );
+  } catch (e) {
+    // Handle FCM init failure gracefully
+  }
+
+  // 5. Existing app initialization
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await dotenv.load(fileName: ".env");
   SystemChrome.setSystemUIOverlayStyle(
     AppTheme.overlayFor(background: AppTheme.pageBackgroundLight, isDark: false),
   );
+
+  // 6. runApp()
   runApp(const MyApp());
 }
 
@@ -115,6 +155,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _quickServiceRepository = QuickServiceRepository(_dioClient);
     _referralRepository = ReferralRepository(_dioClient);
 
+    // Inject NotificationRepository to the FirebaseMessagingService singleton
+    FirebaseMessagingService().setNotificationRepository(NotificationRepository(_dioClient));
+
     // Start global online/offline monitor + attach Dio for queue replay.
     NetworkStatusService.instance.attachDioClient(_dioClient);
     NetworkStatusService.instance.start();
@@ -159,6 +202,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(create: (_) => AnnouncementProvider(_announcementRepository)),
         ChangeNotifierProvider(create: (_) => QuickServiceProvider(_quickServiceRepository)),
         ChangeNotifierProvider(create: (_) => ReferralProvider(_referralRepository)),
+        ChangeNotifierProvider(create: (_) => NotificationProvider(NotificationRepository(_dioClient))),
       ],
       child: const MainApp(),
     );
@@ -175,6 +219,7 @@ class MainApp extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: AppTheme.overlayFor(background: scaffoldBg, isDark: isDark),
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: 'Buuttii',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
@@ -192,6 +237,8 @@ class MainApp extends StatelessWidget {
               return noTransitionRoute(const SettingsScreen());
             case AppRoutes.announcements:
               return noTransitionRoute(const AnnouncementsScreen());
+            case AppRoutes.notifications:
+              return noTransitionRoute(const NotificationsScreen());
             default:
               return null;
           }
