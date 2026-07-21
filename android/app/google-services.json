@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "573329279328",
+    "project_id": "buuttii-33505",
+    "storage_bucket": "buuttii-33505.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:573329279328:android:f2a52ea7c5963aee217605",
+        "android_client_info": {
+          "package_name": "com.buuttii.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAloWWdwn3cg61LKmDOCnLATgG-1hGwmhc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -41,6 +41,7 @@ import 'package:meal_app/core/services/app_route_tracker.dart';
 import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
 import 'package:meal_app/core/widgets/app_skeleton.dart';
 import 'package:meal_app/core/providers/announcement_provider.dart';
+import 'package:meal_app/core/providers/notification_provider.dart';
 import 'package:meal_app/features/quick_service/ui/widgets/quick_order_section.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/core/services/app_update_service.dart';
@@ -62,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _bootstrapHome();
       context.read<LookupProvider>().fetchContactUsInfo();
       context.read<AnnouncementProvider>().fetchAnnouncements(location: 'home', force: true);
+      context.read<NotificationProvider>().fetchNotifications(silent: true);
       AppUpdateService.checkForUpdate(context);
     });
   }
@@ -275,6 +277,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       forceNetwork: NetworkStatusService.instance.isOnline,
                     ),
                     context.read<AnnouncementProvider>().fetchAnnouncements(location: 'home', force: true),
+                    context.read<NotificationProvider>().fetchNotifications(silent: true),
                     context.read<QuickServiceProvider>().loadCartFromServer(),
                     context.read<BulkOrderProvider>().loadCartFromServer(),
                     context.read<QuickServiceProvider>().loadOneDayConfig(force: true),

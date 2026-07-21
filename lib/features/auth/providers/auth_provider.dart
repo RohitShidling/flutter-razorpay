@@ -9,6 +9,7 @@ import 'package:meal_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:meal_app/core/services/firebase_messaging_service.dart';
 
 enum AuthState { initial, loading, authenticated, unauthenticated, error }
 enum AuthMode { login, register }
@@ -115,6 +116,7 @@ class AuthProvider with ChangeNotifier {
       // Offline-first: never block cold start on /auth/me — paint home from
       // cache immediately, then revalidate quietly when reachable.
       unawaited(refreshMeProfile(silent: true));
+      unawaited(FirebaseMessagingService().syncToken());
     } else {
       _state = AuthState.unauthenticated;
       notifyListeners();
@@ -245,6 +247,7 @@ class AuthProvider with ChangeNotifier {
         }
         _state = AuthState.authenticated;
         notifyListeners();
+        unawaited(FirebaseMessagingService().syncToken(force: true));
         return true;
       } else {
         _errorMessage = 'Invalid OTP';
@@ -313,6 +316,7 @@ class AuthProvider with ChangeNotifier {
         } catch (_) {}
         _state = AuthState.authenticated;
         notifyListeners();
+        unawaited(FirebaseMessagingService().syncToken(force: true));
         return true;
       } else {
         _errorMessage = 'Invalid OTP or registration failed';
@@ -334,6 +338,10 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _state = AuthState.loading;
     notifyListeners();
+
+    try {
+      await FirebaseMessagingService().handleLogout().timeout(const Duration(seconds: 5));
+    } catch (_) {}
 
     try {
       await _authRepository.logout().timeout(const Duration(seconds: 10));
@@ -365,6 +373,10 @@ class AuthProvider with ChangeNotifier {
   Future<void> deleteAccount() async {
     _state = AuthState.loading;
     notifyListeners();
+
+    try {
+      await FirebaseMessagingService().handleLogout().timeout(const Duration(seconds: 5));
+    } catch (_) {}
 
     try {
       await _authRepository.deleteAccount().timeout(const Duration(seconds: 10));

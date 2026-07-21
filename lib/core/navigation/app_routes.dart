@@ -4,4 +4,5 @@ class AppRoutes {
   static const mealSkip = '/meal-skip';
   static const settings = '/settings';
   static const announcements = '/announcements';
+  static const notifications = '/notifications';
 }
