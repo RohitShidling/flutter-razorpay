@@ -146,7 +146,9 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
           final row = pay.activeSubscriptions[i];
           if (row is! Map) continue;
           final m = Map<String, dynamic>.from(row);
-          if (_trim(m['entity_type']) == et && _trim(m['entity_id']) == eid) {
+          final subEt = _trim(m['entity_type']).toLowerCase();
+          final subEid = _trim(m['entity_id']);
+          if (subEt == et.toLowerCase() && subEid == eid) {
             pickIndex = i;
             break;
           }
@@ -429,7 +431,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
     final txnId = res?['merchantTransactionId']?.toString() ?? pay.lastTxnId ?? '';
     final orderId = res?['orderId']?.toString() ?? '';
 
-    if (sdkStatus == 'SUCCESS') {
+    if (sdkStatus == 'SUCCESS' || sdkStatus == 'EXTERNAL_WALLET') {
       if (!mounted) return;
       await Navigator.pushReplacement(
         context,
@@ -448,7 +450,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          sdkStatus == 'INTERRUPTED'
+          (sdkStatus == 'CANCELLED' || sdkStatus == 'INTERRUPTED')
               ? 'Payment cancelled. Wallet balance has been restored.'
               : 'Payment did not complete. You can retry when ready.',
         ),

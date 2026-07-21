@@ -919,6 +919,9 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
                   if (_blocksMealSizeChange)
                     MealSizeBlockedBanner(
                       message: _mealSizeBlockedFlash ?? _mealSizeBlockedMessage(lookup),
+                      entityType: 'professional',
+                      entityId: widget.profile?.id,
+                      entityName: widget.profile?.name,
                     ),
                   if (_selectedMealSize != null)
                     Padding(

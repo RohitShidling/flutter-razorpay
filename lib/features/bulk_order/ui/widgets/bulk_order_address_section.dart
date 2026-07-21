@@ -71,25 +71,11 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
         onSaved: (saved) {
           // After saving, mark the new address as selected in the provider
           final provider = context.read<BulkOrderProvider>();
-          if (widget.showDeliveryTime) {
-            final addressWithoutTime = BulkDeliveryAddress(
-              id: saved.id,
-              label: saved.label,
-              stateId: saved.stateId,
-              cityId: saved.cityId,
-              addressLine: saved.addressLine,
-              pincode: saved.pincode,
-              stateName: saved.stateName,
-              cityName: saved.cityName,
-              isDefault: saved.isDefault,
-              deliveryTime: null, // Force deliveryTime to be null/empty
-              phoneNumber: saved.phoneNumber,
-              altPhoneNumber: saved.altPhoneNumber,
-            );
-            provider.setDeliveryAddress(addressWithoutTime);
-            _deliveryTimeController.clear();
-          } else {
-            provider.setDeliveryAddress(saved);
+          provider.setDeliveryAddress(saved);
+          if (widget.showDeliveryTime &&
+              saved.deliveryTime != null &&
+              saved.deliveryTime!.trim().isNotEmpty) {
+            _deliveryTimeController.text = saved.deliveryTime!.trim();
           }
         },
       ),
@@ -125,33 +111,14 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
 
   Future<void> _selectAddress(BulkDeliveryAddress address) async {
     final provider = context.read<BulkOrderProvider>();
-    if (widget.showDeliveryTime) {
-      final addressWithoutTime = BulkDeliveryAddress(
-        id: address.id,
-        label: address.label,
-        stateId: address.stateId,
-        cityId: address.cityId,
-        addressLine: address.addressLine,
-        pincode: address.pincode,
-        stateName: address.stateName,
-        cityName: address.cityName,
-        isDefault: address.isDefault,
-        deliveryTime: null, // Force deliveryTime to be null/empty
-        phoneNumber: address.phoneNumber,
-        altPhoneNumber: address.altPhoneNumber,
-      );
-      if (address.id != null) {
-        await provider.selectSavedDeliveryAddress(address.id!);
-        provider.setDeliveryAddress(addressWithoutTime);
-      } else {
-        provider.setDeliveryAddress(addressWithoutTime);
-      }
-      _deliveryTimeController.clear();
+    if (address.id != null) {
+      await provider.selectSavedDeliveryAddress(address.id!);
     } else {
-      if (address.id != null) {
-        await provider.selectSavedDeliveryAddress(address.id!);
-      } else {
-        provider.setDeliveryAddress(address);
+      provider.setDeliveryAddress(address);
+    }
+    if (widget.showDeliveryTime) {
+      if (address.deliveryTime != null && address.deliveryTime!.trim().isNotEmpty) {
+        _deliveryTimeController.text = address.deliveryTime!.trim();
       }
     }
   }

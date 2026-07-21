@@ -578,6 +578,9 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     if (_blocksMealSizeChange)
                       MealSizeBlockedBanner(
                         message: _mealSizeBlockedFlash ?? _mealSizeBlockedMessage(profileProvider, lookup),
+                        entityType: 'professional',
+                        entityId: profile?.id,
+                        entityName: profile?.name,
                       ),
                     if (_selectedMealSize != null)
                       Padding(

@@ -153,7 +153,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(create: (_) => MenuProvider(_dioClient, _cache)),
         ChangeNotifierProvider(create: (_) => PaymentProvider(_paymentRepository, _cache)),
         ChangeNotifierProvider(create: (_) => HomepageProvider(_homepageRepository)),
-        ChangeNotifierProvider(create: (_) => CartProvider(_cartRepository)),
+        ChangeNotifierProvider(create: (_) => CartProvider(_cartRepository, paymentRepository: _paymentRepository)),
         ChangeNotifierProvider(create: (_) => MealProvider(_mealRepository, _cache)),
         ChangeNotifierProvider(create: (_) => BulkOrderProvider(_bulkOrderRepository)),
         ChangeNotifierProvider(create: (_) => AnnouncementProvider(_announcementRepository)),

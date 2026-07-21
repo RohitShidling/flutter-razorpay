@@ -7,8 +7,8 @@ import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_section.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
-import 'package:meal_app/features/bulk_order/data/models/bulk_delivery_address.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
+import 'package:meal_app/core/providers/payment_provider.dart';
 
 class QuickServiceCheckout {
   QuickServiceCheckout._();
@@ -153,15 +153,38 @@ class QuickServiceCheckout {
     if (!context.mounted) return;
 
     if (result != null) {
+      final sdkStatus = result['sdkStatus']?.toString() ?? 'FAILURE';
       final txnId = result['merchantTransactionId']?.toString() ?? '';
       final orderId = result['orderId']?.toString() ?? '';
-      if (txnId.isNotEmpty) {
-        _openStatusScreen(
-          context,
-          txnId: txnId,
-          orderId: orderId,
-          orderType: 'one_day_lunch',
+
+      if (sdkStatus == 'SUCCESS' || sdkStatus == 'EXTERNAL_WALLET') {
+        if (txnId.isNotEmpty) {
+          _openStatusScreen(
+            context,
+            txnId: txnId,
+            orderId: orderId,
+            orderType: 'one_day_lunch',
+          );
+          return;
+        }
+      } else if (sdkStatus == 'CANCELLED') {
+        await context.read<PaymentProvider>().abandonPendingPayment(
+          orderId: orderId.isNotEmpty ? orderId : null,
+          merchantTransactionId: txnId.isNotEmpty ? txnId : null,
         );
+        if (context.mounted) {
+          ErrorHandler.showError(context, 'Payment cancelled.');
+        }
+        return;
+      } else {
+        await context.read<PaymentProvider>().abandonPendingPayment(
+          orderId: orderId.isNotEmpty ? orderId : null,
+          merchantTransactionId: txnId.isNotEmpty ? txnId : null,
+        );
+        if (context.mounted) {
+          final errStr = result['error']?.toString() ?? provider.error;
+          ErrorHandler.showError(context, errStr ?? 'Payment failed.');
+        }
         return;
       }
     }
@@ -215,15 +238,38 @@ class QuickServiceCheckout {
     if (!context.mounted) return;
 
     if (result != null) {
+      final sdkStatus = result['sdkStatus']?.toString() ?? 'FAILURE';
       final txnId = result['merchantTransactionId']?.toString() ?? '';
       final orderId = result['orderId']?.toString() ?? '';
-      if (txnId.isNotEmpty) {
-        _openStatusScreen(
-          context,
-          txnId: txnId,
-          orderId: orderId,
-          orderType: 'special_dish',
+
+      if (sdkStatus == 'SUCCESS' || sdkStatus == 'EXTERNAL_WALLET') {
+        if (txnId.isNotEmpty) {
+          _openStatusScreen(
+            context,
+            txnId: txnId,
+            orderId: orderId,
+            orderType: 'special_dish',
+          );
+          return;
+        }
+      } else if (sdkStatus == 'CANCELLED') {
+        await context.read<PaymentProvider>().abandonPendingPayment(
+          orderId: orderId.isNotEmpty ? orderId : null,
+          merchantTransactionId: txnId.isNotEmpty ? txnId : null,
         );
+        if (context.mounted) {
+          ErrorHandler.showError(context, 'Payment cancelled.');
+        }
+        return;
+      } else {
+        await context.read<PaymentProvider>().abandonPendingPayment(
+          orderId: orderId.isNotEmpty ? orderId : null,
+          merchantTransactionId: txnId.isNotEmpty ? txnId : null,
+        );
+        if (context.mounted) {
+          final errStr = result['error']?.toString() ?? provider.error;
+          ErrorHandler.showError(context, errStr ?? 'Payment failed.');
+        }
         return;
       }
     }
@@ -243,22 +289,8 @@ class QuickServiceCheckout {
 
     final address = backendAddress ?? bulk.deliveryAddress;
     if (address != null) {
-      final addressWithoutTime = BulkDeliveryAddress(
-        id: address.id,
-        label: address.label,
-        stateId: address.stateId,
-        cityId: address.cityId,
-        addressLine: address.addressLine,
-        pincode: address.pincode,
-        stateName: address.stateName,
-        cityName: address.cityName,
-        isDefault: address.isDefault,
-        deliveryTime: null,
-        phoneNumber: address.phoneNumber,
-        altPhoneNumber: address.altPhoneNumber,
-      );
-      bulk.setDeliveryAddress(addressWithoutTime);
-      quick.setAddress(addressWithoutTime);
+      bulk.setDeliveryAddress(address);
+      quick.setAddress(address);
     }
   }
 }

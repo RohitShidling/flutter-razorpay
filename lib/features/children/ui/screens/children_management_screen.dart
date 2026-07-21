@@ -1141,6 +1141,9 @@ class _ChildFormState extends State<_ChildForm> {
               if (_blocksMealSizeChange)
                 MealSizeBlockedBanner(
                   message: _mealSizeBlockedFlash ?? _mealSizeBlockedMessage(lookup),
+                  entityType: 'child',
+                  entityId: widget.child?.id,
+                  entityName: widget.child?.name,
                 ),
               if (_selectedStandard != null)
                 Padding(

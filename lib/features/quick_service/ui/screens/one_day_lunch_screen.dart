@@ -9,7 +9,6 @@ import 'package:meal_app/features/quick_service/providers/quick_service_provider
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_section.dart';
 import 'package:meal_app/features/quick_service/ui/widgets/quick_service_checkout.dart';
-import 'package:meal_app/features/bulk_order/data/models/bulk_delivery_address.dart';
 import 'package:meal_app/core/utils/time_utils.dart';
 import 'package:meal_app/core/widgets/responsive_layout.dart';
 
@@ -65,6 +64,7 @@ class OneDayLunchScreen extends StatefulWidget {
 class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
   late String _deliveryType;
   int _quantity = 1;
+  bool _isScreenLoading = true;
 
   @override
   void initState() {
@@ -77,7 +77,9 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
   }
 
   Future<void> _loadData() async {
-      if (!mounted) return;
+    if (!mounted) return;
+    setState(() => _isScreenLoading = true);
+    try {
       final p = context.read<QuickServiceProvider>();
       final bulk = context.read<BulkOrderProvider>();
       final menu = context.read<MenuProvider>();
@@ -87,29 +89,14 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
       await Future.wait([
         p.loadOneDayConfig(),                          // always fresh
         bulk.loadSavedDeliveryAddress(),
-        if (menu.todayMenu == null) menu.fetchTodayMenu(silent: true),
+        menu.fetchTodayMenu(force: true, silent: true),
         menu.fetchWeeklyMenuSilent(),
       ]);
 
       if (!mounted) return;
       final addr = bulk.deliveryAddress;
       if (addr != null) {
-        final addressWithoutTime = BulkDeliveryAddress(
-          id: addr.id,
-          label: addr.label,
-          stateId: addr.stateId,
-          cityId: addr.cityId,
-          addressLine: addr.addressLine,
-          pincode: addr.pincode,
-          stateName: addr.stateName,
-          cityName: addr.cityName,
-          isDefault: addr.isDefault,
-          deliveryTime: null,
-          phoneNumber: addr.phoneNumber,
-          altPhoneNumber: addr.altPhoneNumber,
-        );
-        bulk.setDeliveryAddress(addressWithoutTime);
-        p.setAddress(addressWithoutTime);
+        p.setAddress(addr);
       }
 
       final todayMenu = menu.todayMenu;
@@ -123,25 +110,26 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
         final todaySunday = _isTodaySunday();
         final tomorrowSunday = _isTomorrowSunday();
 
-        setState(() {
-          if (tomorrowSunday) {
-            // Next-day is Sunday (no delivery) → must use today
-            // Only switch to today if the order window is still open AND today isn't Sunday
-            if (todayOpen && !todaySunday) {
-              _deliveryType = 'today';
-            } else {
-              // Both options unavailable; keep next_day so the UI correctly shows "closed"
-              _deliveryType = 'next_day';
-            }
-          } else if (_deliveryType == 'today' && (!todayOpen || todaySunday)) {
-            // Today's window closed or today is Sunday → switch to next_day
+        if (tomorrowSunday) {
+          // Next-day is Sunday (no delivery) → must use today
+          // Only switch to today if the order window is still open AND today isn't Sunday
+          if (todayOpen && !todaySunday) {
+            _deliveryType = 'today';
+          } else {
+            // Both options unavailable; keep next_day so the UI correctly shows "closed"
             _deliveryType = 'next_day';
           }
-        // If next_day is fine and currently selected, keep it.
-        });
+        } else if (_deliveryType == 'today' && (!todayOpen || todaySunday)) {
+          // Today's window closed or today is Sunday → switch to next_day
+          _deliveryType = 'next_day';
+        }
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isScreenLoading = false);
+      }
+    }
   }
-
 
   Future<void> _pay() async {
     await QuickServiceCheckout.payOneDayLunch(
@@ -156,6 +144,38 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = isDark ? AppTheme.backgroundDark : Colors.white;
+
+    if (_isScreenLoading) {
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: AppTheme.overlayFor(background: pageBg, isDark: isDark),
+        child: Scaffold(
+          backgroundColor: pageBg,
+          appBar: AppBar(
+            title: const Text('One Day Lunch'),
+            backgroundColor: pageBg,
+            surfaceTintColor: Colors.transparent,
+            systemOverlayStyle: AppTheme.overlayFor(background: pageBg, isDark: isDark),
+          ),
+          body: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'Loading lunch menu...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: AppTheme.overlayFor(background: pageBg, isDark: isDark),
@@ -178,9 +198,6 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
             error: p.error,
           ),
           builder: (context, data, _) {
-            if (data.isLoading && data.cfg == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
             if (data.cfg == null) {
               return Center(child: Text(data.error ?? 'Service unavailable'));
             }

@@ -110,6 +110,7 @@ class ApiEndpoints {
   static String paymentStatus(String txnId) => '/api/client/payment/status/$txnId';
   static const String paymentHistory = '/api/client/payment/history';
   static const String activeSubscriptions = '/api/client/payment/active-subscriptions';
+  static const String verifySignature = '/api/client/payment/verify-signature';
   static String forceSync(String txnId) => '/api/client/payment/force-sync/$txnId';
   static String get paymentStatusPage => '$baseUrl/api/client/payment/status-page';
 

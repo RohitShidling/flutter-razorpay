@@ -44,9 +44,34 @@ class WalletPaymentFlow {
       ...paymentData,
       'sdkStatus': status,
       'sdkError': sdkResult['error'],
+      'paymentId': sdkResult['paymentId'],
+      'signature': sdkResult['signature'],
     };
 
-    if (status != 'SUCCESS' && status != 'PENDING' && paymentRepository != null) {
+    if (status == 'SUCCESS' && paymentRepository != null) {
+      final paymentId = sdkResult['paymentId']?.toString();
+      final orderId = sdkResult['orderId']?.toString() ?? razorpayOrderId;
+      final signature = sdkResult['signature']?.toString();
+      final merchantTxnId = paymentData['merchantTransactionId']?.toString();
+
+      if (paymentId != null && signature != null) {
+        try {
+          await paymentRepository.verifyPaymentSignature(
+            razorpayOrderId: orderId,
+            razorpayPaymentId: paymentId,
+            razorpaySignature: signature,
+            merchantTransactionId: merchantTxnId,
+          );
+        } catch (_) {
+          // Signature verification best-effort — fallback to status polling / webhook.
+        }
+      }
+    }
+
+    // Only abandon for definitive failures. EXTERNAL_WALLET means the user
+    // was redirected to a wallet app — the payment may still complete via
+    // webhook. CANCELLED is handled by the caller (cart/payment screen).
+    if (status == 'FAILURE' && paymentRepository != null) {
       await abandonPendingPayment(paymentRepository, paymentData);
     }
 

@@ -817,17 +817,26 @@ class BulkOrderProvider with ChangeNotifier {
         throw Exception('Payment information not received from gateway');
       }
 
+      final contact = paymentData['contact']?.toString();
+      final email = paymentData['email']?.toString();
+
       String status = 'FAILURE';
       String? sdkError;
+      String? sdkPaymentId;
+      String? sdkSignature;
       try {
         final sdkResult = await RazorpayService.pay(
           razorpayOrderId: razorpayOrderId,
           keyId: keyId,
           amount: amount,
           currency: currency,
+          contact: contact,
+          email: email,
         );
         status = sdkResult['status'] ?? 'FAILURE';
         sdkError = sdkResult['error'];
+        sdkPaymentId = sdkResult['paymentId'];
+        sdkSignature = sdkResult['signature'];
       } catch (sdkEx) {
         sdkError = sdkEx.toString();
       }
@@ -836,6 +845,8 @@ class BulkOrderProvider with ChangeNotifier {
         ...paymentData,
         'sdkStatus': status,
         'sdkError': sdkError,
+        'paymentId': sdkPaymentId,
+        'signature': sdkSignature,
         'merchantTransactionId': merchantTransactionId,
       };
     } catch (e) {
@@ -878,6 +889,8 @@ class BulkOrderProvider with ChangeNotifier {
       final amount = (paymentData['amount'] as num?)?.toDouble() ?? 0.0;
       final currency = paymentData['currency']?.toString() ?? 'INR';
       final merchantTransactionId = paymentData['merchantTransactionId']?.toString() ?? '';
+      final contact2 = paymentData['contact']?.toString();
+      final email2 = paymentData['email']?.toString();
 
       if (razorpayOrderId == null || razorpayOrderId.isEmpty || keyId == null || keyId.isEmpty) {
         throw Exception('Payment information not received from gateway');
@@ -885,15 +898,21 @@ class BulkOrderProvider with ChangeNotifier {
 
       String status = 'FAILURE';
       String? sdkError;
+      String? sdkPaymentId;
+      String? sdkSignature;
       try {
         final sdkResult = await RazorpayService.pay(
           razorpayOrderId: razorpayOrderId,
           keyId: keyId,
           amount: amount,
           currency: currency,
+          contact: contact2,
+          email: email2,
         );
         status = sdkResult['status'] ?? 'FAILURE';
         sdkError = sdkResult['error'];
+        sdkPaymentId = sdkResult['paymentId'];
+        sdkSignature = sdkResult['signature'];
       } catch (sdkEx) {
         sdkError = sdkEx.toString();
       }
@@ -902,6 +921,8 @@ class BulkOrderProvider with ChangeNotifier {
         ...paymentData,
         'sdkStatus': status,
         'sdkError': sdkError,
+        'paymentId': sdkPaymentId,
+        'signature': sdkSignature,
         'merchantTransactionId': merchantTransactionId,
       };
     } catch (e) {

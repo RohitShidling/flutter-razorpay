@@ -420,6 +420,8 @@ class QuickServiceProvider with ChangeNotifier {
     final currency = paymentData['currency']?.toString() ?? 'INR';
     final merchantTransactionId = paymentData['merchantTransactionId']?.toString() ?? '';
     final orderId = paymentData['orderId']?.toString() ?? '';
+    final contact = paymentData['contact']?.toString();
+    final email = paymentData['email']?.toString();
 
     if (razorpayOrderId.isEmpty || keyId.isEmpty) {
       _error = 'Payment information not received from gateway';
@@ -431,6 +433,8 @@ class QuickServiceProvider with ChangeNotifier {
       keyId: keyId,
       amount: amount,
       currency: currency,
+      contact: contact,
+      email: email,
     );
     final status = sdkResult['status']?.toString() ?? 'FAILURE';
     if (status != 'SUCCESS') {
@@ -441,6 +445,8 @@ class QuickServiceProvider with ChangeNotifier {
       'merchantTransactionId': merchantTransactionId,
       'orderId': orderId,
       'razorpayOrderId': razorpayOrderId,
+      'paymentId': sdkResult['paymentId'],
+      'signature': sdkResult['signature'],
       'error': sdkResult['error']?.toString(),
     };
   }

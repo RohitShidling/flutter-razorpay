@@ -293,6 +293,32 @@ class PaymentRepository {
     }
   }
 
+  Future<Map<String, dynamic>> verifyPaymentSignature({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+    String? merchantTransactionId,
+  }) async {
+    try {
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.verifySignature,
+        data: {
+          'razorpayOrderId': razorpayOrderId,
+          'razorpayPaymentId': razorpayPaymentId,
+          'razorpaySignature': razorpaySignature,
+          if (merchantTransactionId != null) 'merchantTransactionId': merchantTransactionId,
+        },
+      );
+      if (response.data['success'] == true) {
+        return response.data;
+      } else {
+        throw response.data['message']?.toString() ?? 'Signature verification failed';
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> getSubscriptionStatus() async {
     try {
       final response = await _dioClient.dio.get(ApiEndpoints.subscriptionStatus);

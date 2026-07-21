@@ -602,6 +602,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     if (_blocksMealSizeChange)
                       MealSizeBlockedBanner(
                         message: _mealSizeBlockedFlash ?? _mealSizeBlockedMessage(profileProvider, lookupProvider),
+                        entityType: 'teacher',
+                        entityId: profile?.id,
+                        entityName: profile?.name,
                       ),
                     if (_selectedMealSize != null)
                       Padding(

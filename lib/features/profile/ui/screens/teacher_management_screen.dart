@@ -975,6 +975,9 @@ class _TeacherFormState extends State<_TeacherForm> {
                   if (_blocksMealSizeChange)
                     MealSizeBlockedBanner(
                       message: _mealSizeBlockedFlash ?? _mealSizeBlockedMessage(lookup),
+                      entityType: 'teacher',
+                      entityId: widget.profile?.id,
+                      entityName: widget.profile?.name,
                     ),
                   if (_selectedMealSize != null)
                     Padding(

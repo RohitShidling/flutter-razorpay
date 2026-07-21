@@ -93,7 +93,6 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           });
         }
       } catch (e) {
-        // Continue polling on error
         if (mounted) {
           setState(() {
             _lastPollingError = ErrorHandler.getErrorMessage(e);
@@ -102,7 +101,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
       }
 
       if (_isPolling && mounted) {
-        await Future.delayed(const Duration(seconds: 3));
+        await Future.delayed(Duration(seconds: _retryCount == 0 ? 1 : 2));
         _retryCount++;
       }
     }
@@ -365,18 +364,18 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         const CupertinoActivityIndicator(radius: 20),
         const SizedBox(height: 24),
         Text(
-          'Verifying Payment Status',
+          'Confirming Your Payment',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
         ),
         const SizedBox(height: 8),
         Text(
-          'Please do not close the app or press back.',
+          'This usually takes a few seconds...',
           style: TextStyle(color: isDark ? Colors.white54 : Colors.grey),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 6),
         Text(
-          'Attempt ${_retryCount + 1} of $_maxRetries',
-          style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.grey.shade400),
+          'Please do not close the app.',
+          style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.grey.shade400),
         ),
         if (_lastPollingError != null) ...[
           const SizedBox(height: 14),

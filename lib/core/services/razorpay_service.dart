@@ -1,9 +1,27 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'dart:developer' as dev;
 
 class RazorpayService {
   RazorpayService._();
+
+  /// Parses the Razorpay error message, which may be a JSON string, to extract
+  /// a human-readable description. Falls back to raw string or a default.
+  static String _parseErrorMessage(String? raw) {
+    if (raw == null || raw.isEmpty) return 'Payment was not completed';
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        final error = decoded['error'];
+        if (error is Map) {
+          return error['description']?.toString() ?? error['reason']?.toString() ?? raw;
+        }
+        return decoded['description']?.toString() ?? raw;
+      }
+    } catch (_) {}
+    return raw;
+  }
 
   static Future<Map<String, dynamic>> pay({
     required String razorpayOrderId,
@@ -31,11 +49,18 @@ class RazorpayService {
 
     void handlePaymentError(PaymentFailureResponse response) {
       dev.log('Razorpay Payment Error: code=${response.code}, message=${response.message}');
+      final humanMessage = _parseErrorMessage(response.message);
+      final msgLower = (response.message ?? '').toLowerCase();
+      final isCancelled = response.code == 2 ||
+          msgLower.contains('cancel') ||
+          msgLower.contains('dismiss') ||
+          msgLower.contains('exit') ||
+          msgLower.contains('back');
       if (!completer.isCompleted) {
         completer.complete({
-          'status': 'FAILURE',
+          'status': isCancelled ? 'CANCELLED' : 'FAILURE',
           'code': response.code,
-          'error': response.message,
+          'error': isCancelled ? 'Payment cancelled by user' : humanMessage,
         });
       }
       razorpay.clear();
@@ -43,9 +68,13 @@ class RazorpayService {
 
     void handleExternalWallet(ExternalWalletResponse response) {
       dev.log('Razorpay External Wallet: name=${response.walletName}');
+      // External wallet selection does NOT mean payment succeeded.
+      // The user is redirected to the wallet app; actual success/failure
+      // comes back through the success or error callbacks, or via webhook.
+      // We treat this as a PENDING state so the status screen polls for result.
       if (!completer.isCompleted) {
         completer.complete({
-          'status': 'SUCCESS',
+          'status': 'EXTERNAL_WALLET',
           'walletName': response.walletName,
         });
       }
@@ -85,3 +114,4 @@ class RazorpayService {
     return completer.future;
   }
 }
+

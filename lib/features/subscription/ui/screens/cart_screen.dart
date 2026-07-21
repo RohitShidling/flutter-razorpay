@@ -14,7 +14,6 @@ import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
-import 'package:meal_app/features/subscription/ui/screens/payment_webview_screen.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
 import 'package:meal_app/core/widgets/wallet_checkout_section.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
@@ -754,22 +753,15 @@ class _CartScreenState extends State<CartScreen> {
 
     final pay = context.read<PaymentProvider>();
     final sdkStatus = result['sdkStatus']?.toString() ?? 'FAILURE';
-    if (sdkStatus != 'SUCCESS') {
-      await pay.abandonPendingPayment(
-        orderId: result['orderId']?.toString(),
-        merchantTransactionId: result['merchantTransactionId']?.toString(),
-      );
-    } else {
-      await pay.fetchWallet(silent: true);
-    }
-
-    if (!mounted) return;
-
     final txnId = result['merchantTransactionId']?.toString() ?? '';
     final orderId = result['orderId']?.toString() ?? '';
-    final paymentUrl = result['paymentUrl']?.toString() ?? '';
 
+    // ── Handle each SDK outcome ─────────────────────────────────────────────
     if (sdkStatus == 'SUCCESS') {
+      // Razorpay confirmed payment on-device. Navigate to status screen
+      // where backend signature verification + webhook confirm it.
+      await pay.fetchWallet(silent: true);
+      if (!mounted) return;
       if (txnId.isNotEmpty) {
         Navigator.pushReplacement(
           context,
@@ -777,33 +769,44 @@ class _CartScreenState extends State<CartScreen> {
             builder: (_) => PaymentStatusScreen(txnId: txnId, orderId: orderId, orderType: 'cart'),
           ),
         );
-      } else {
-        setState(() {
-          _localError = 'Payment failed or was cancelled.';
-        });
       }
-    } else {
-      if (paymentUrl.isNotEmpty && txnId.isNotEmpty) {
-        await Navigator.push(
-          context,
-          CupertinoPageRoute(
-            builder: (_) => PaymentWebViewScreen(url: paymentUrl, txnId: txnId, orderId: orderId),
-          ),
-        );
-        if (!mounted) return;
+    } else if (sdkStatus == 'EXTERNAL_WALLET') {
+      // User was redirected to an external wallet app (PhonePe, GPay, etc.).
+      // The payment may still complete — webhook will handle it.
+      // Navigate to status screen to poll for the result.
+      if (!mounted) return;
+      if (txnId.isNotEmpty) {
         Navigator.pushReplacement(
           context,
           CupertinoPageRoute(
             builder: (_) => PaymentStatusScreen(txnId: txnId, orderId: orderId, orderType: 'cart'),
           ),
         );
-      } else {
-        setState(() {
-          _localError = sdkStatus == 'INTERRUPTED'
-              ? 'Payment cancelled. Wallet balance has been restored.'
-              : (result?['sdkError']?.toString() ?? 'Payment failed or was cancelled.');
-        });
       }
+    } else if (sdkStatus == 'CANCELLED') {
+      // User explicitly dismissed the Razorpay checkout.
+      // Abandon the pending order and restore wallet balance.
+      await pay.abandonPendingPayment(
+        orderId: orderId.isNotEmpty ? orderId : null,
+        merchantTransactionId: txnId.isNotEmpty ? txnId : null,
+      );
+      if (!mounted) return;
+      setState(() {
+        _localError = 'Payment cancelled.';
+      });
+    } else {
+      // FAILURE — Razorpay reported an error (network, bank decline, etc.)
+      await pay.abandonPendingPayment(
+        orderId: orderId.isNotEmpty ? orderId : null,
+        merchantTransactionId: txnId.isNotEmpty ? txnId : null,
+      );
+      if (!mounted) return;
+      final errorMsg = result['sdkError']?.toString();
+      setState(() {
+        _localError = (errorMsg != null && errorMsg.isNotEmpty && errorMsg != 'null')
+            ? errorMsg
+            : 'Payment failed. Please try again.';
+      });
     }
   }
 

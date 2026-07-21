@@ -407,7 +407,11 @@ class PaymentProvider with ChangeNotifier {
       unawaited(fetchWallet(silent: true));
       unawaited(fetchPaymentHistory(silent: true));
       unawaited(fetchActiveSubscriptions(silent: true, force: true));
-    } else if (status == 'INTERRUPTED') {
+    } else if (status == 'EXTERNAL_WALLET') {
+      // User redirected to external wallet app (PhonePe/GPay). Payment may
+      // still succeed — webhook will finalize. Treat as processing/pending.
+      _paymentStatus = PaymentStatus.processing;
+    } else if (status == 'CANCELLED' || status == 'INTERRUPTED') {
       _paymentStatus = PaymentStatus.interrupted;
       unawaited(fetchWallet(silent: true));
     } else {

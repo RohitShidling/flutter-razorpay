@@ -32,7 +32,16 @@ class _BulkOrderCartScreenState extends State<BulkOrderCartScreen> {
         await provider.loadConfig();
       }
       if (!mounted) return;
-      await provider.loadCartFromServer();
+      // Only load from server if the provider has no items in memory.
+      // When navigating from the standard/variety screen, items were just set
+      // via setStandardDraft/setVarietyQty and the debounced server sync may
+      // not have completed yet. Loading from server would overwrite with stale data.
+      if (!provider.hasBulkCartItems) {
+        await provider.loadCartFromServer();
+      } else {
+        // Ensure the pending cart sync completes so server is up to date.
+        await provider.syncCartToServer();
+      }
       if (!mounted) return;
       final date = provider.standardDeliveryDate;
       if ((provider.standardQty ?? 0) > 0 && date != null && date.length >= 10) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:meal_app/core/network/cart_repository.dart';
+import 'package:meal_app/core/network/payment_repository.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/core/services/offline_queue.dart';
@@ -62,8 +63,10 @@ class CartItem {
 /// All operations hit the backend — no local-only state.
 class CartProvider with ChangeNotifier {
   final CartRepository _repository;
+  final PaymentRepository? _paymentRepository;
 
-  CartProvider(this._repository) {
+  CartProvider(this._repository, {PaymentRepository? paymentRepository})
+      : _paymentRepository = paymentRepository {
     _loadCachedCart();
   }
 
@@ -614,6 +617,7 @@ class CartProvider with ChangeNotifier {
       final result = await WalletPaymentFlow.completeAfterInit(
         paymentData: paymentData,
         isSandbox: isSandbox,
+        paymentRepository: _paymentRepository,
       );
 
       return result;

@@ -3,8 +3,9 @@ import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/core/utils/time_utils.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:meal_app/core/providers/payment_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
-import 'package:meal_app/features/subscription/ui/screens/payment_webview_screen.dart';
 
 class BulkOrderCheckout {
   BulkOrderCheckout._();
@@ -115,41 +116,32 @@ class BulkOrderCheckout {
       final sdkStatus = result['sdkStatus']?.toString() ?? 'FAILURE';
       final txnId = result['merchantTransactionId']?.toString() ?? '';
       final orderId = result['orderId']?.toString() ?? '';
-      final paymentUrl = result['paymentUrl']?.toString() ?? '';
 
-      // Bulk orders should always enter the shared payment status flow once
-      // the backend has created a merchant transaction id. This mirrors the
-      // working subscription/cart confirmation path and lets the backend poll,
-      // finalize, or force-sync even when the Razorpay SDK returns an
-      // unexpected status.
-      if (txnId.isNotEmpty && context.mounted) {
-        if (sdkStatus == 'SUCCESS') {
+      if (sdkStatus == 'SUCCESS' || sdkStatus == 'EXTERNAL_WALLET') {
+        if (txnId.isNotEmpty && context.mounted) {
           _openStatusScreen(context, txnId: txnId, orderId: orderId);
           return;
         }
-
-        if (paymentUrl.isNotEmpty) {
-          await Navigator.push(
-            context,
-            CupertinoPageRoute(
-              builder: (_) => PaymentWebViewScreen(
-                url: paymentUrl,
-                txnId: txnId,
-                orderId: orderId,
-              ),
-            ),
-          );
-          if (context.mounted) {
-            _openStatusScreen(context, txnId: txnId, orderId: orderId);
-          }
-          return;
+      } else if (sdkStatus == 'CANCELLED') {
+        await context.read<PaymentProvider>().abandonPendingPayment(
+          orderId: orderId.isNotEmpty ? orderId : null,
+          merchantTransactionId: txnId.isNotEmpty ? txnId : null,
+        );
+        if (context.mounted) {
+          ErrorHandler.showError(context, 'Payment cancelled.');
         }
-
-        _openStatusScreen(context, txnId: txnId, orderId: orderId);
+        return;
+      } else {
+        await context.read<PaymentProvider>().abandonPendingPayment(
+          orderId: orderId.isNotEmpty ? orderId : null,
+          merchantTransactionId: txnId.isNotEmpty ? txnId : null,
+        );
+        if (context.mounted) {
+          final errStr = result['sdkError']?.toString() ?? provider.error;
+          ErrorHandler.showError(context, errStr ?? 'Payment failed.');
+        }
         return;
       }
-
-      ErrorHandler.showError(context, result['sdkError'] ?? 'Payment failed or was cancelled.');
     } else if (provider.error != null) {
       ErrorHandler.showError(context, provider.error);
     }
