@@ -49,6 +49,10 @@ class ApiEndpoints {
   static const String me = '/api/client/auth/me';
   static const String deleteAccount = '/api/client/auth/delete-account';
 
+  // Notifications
+  static const String registerDeviceToken = '/api/client/notifications/tokens/register';
+  static const String unregisterDeviceToken = '/api/client/notifications/tokens/unregister';
+
   // Legacy (kept for backward compat — remove later)
   static const String sendOtp = '/api/client/auth/send-otp';
   static const String verifyOtp = '/api/client/auth/verify-otp';
