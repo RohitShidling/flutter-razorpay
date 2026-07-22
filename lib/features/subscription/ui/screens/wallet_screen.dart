@@ -52,7 +52,7 @@ class _WalletScreenState extends State<WalletScreen> {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.viewPaddingOf(context).bottom),
           children: [
             Container(
               width: double.infinity,

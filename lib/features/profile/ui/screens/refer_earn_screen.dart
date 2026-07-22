@@ -261,47 +261,50 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
           navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
         ),
       ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () => _refreshAllData(silent: true),
-            color: AppTheme.primaryColor,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              children: [
-                // 1. Premium Visual Banner
-                _buildHeroBanner(mealsReward, isDark),
-                const SizedBox(height: 24),
-
-                // 2. Share referral code section
-                _buildShareCard(referralCode, mealsReward, isDark),
-                const SizedBox(height: 24),
-
-                // 2.5 Referral Rewards Summary card
-                _buildReferralSummaryCard(referralProvider.rewards, isDark),
-                const SizedBox(height: 24),
-
-                // 3. Pending Reward allocation section
-                if (pendingRewards.isNotEmpty) ...[
-                  _buildPendingRewardsSection(pendingRewards, candidates, isDark),
+      body: SafeArea(
+        top: false,
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: () => _refreshAllData(silent: true),
+              color: AppTheme.primaryColor,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                children: [
+                  // 1. Premium Visual Banner
+                  _buildHeroBanner(mealsReward, isDark),
                   const SizedBox(height: 24),
+
+                  // 2. Share referral code section
+                  _buildShareCard(referralCode, mealsReward, isDark),
+                  const SizedBox(height: 24),
+
+                  // 2.5 Referral Rewards Summary card
+                  _buildReferralSummaryCard(referralProvider.rewards, isDark),
+                  const SizedBox(height: 24),
+
+                  // 3. Pending Reward allocation section
+                  if (pendingRewards.isNotEmpty) ...[
+                    _buildPendingRewardsSection(pendingRewards, candidates, isDark),
+                    const SizedBox(height: 24),
+                  ],
+
+
+                  // 5. How it works guide
+                  _buildHowItWorks(mealsReward, isDark),
+                  const SizedBox(height: 40),
                 ],
-
-
-                // 5. How it works guide
-                _buildHowItWorks(mealsReward, isDark),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
-          if (referralProvider.isLoading || _isActionLoading)
-            Container(
-              color: Colors.black.withValues(alpha: 0.3),
-              child: const Center(
-                child: CupertinoActivityIndicator(radius: 16, color: AppTheme.primaryColor),
               ),
             ),
-        ],
+            if (referralProvider.isLoading || _isActionLoading)
+              Container(
+                color: Colors.black.withValues(alpha: 0.3),
+                child: const Center(
+                  child: CupertinoActivityIndicator(radius: 16, color: AppTheme.primaryColor),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

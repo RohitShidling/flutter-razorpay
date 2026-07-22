@@ -303,7 +303,7 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
                       )
                     : ListView(
                         controller: scrollController,
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                        padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
                         children: [
                           if (regular.isNotEmpty) ...[
                             _sectionTitle('Regular plans', isDark),
