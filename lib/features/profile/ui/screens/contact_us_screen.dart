@@ -89,7 +89,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
       body: _isLoading
           ? const Center(child: CupertinoActivityIndicator())
           : ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + MediaQuery.paddingOf(context).bottom),
               children: [
                 Container(
                   padding: const EdgeInsets.all(24),

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../backend-razorpay"
+		},
+		{
+			"path": "../admin-razorpay"
+		}
+	],
+	"settings": {}
+}
