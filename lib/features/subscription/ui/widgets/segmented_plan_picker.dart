@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 
 class SegmentedPlanPicker extends StatelessWidget {
@@ -16,6 +18,7 @@ class SegmentedPlanPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final regularPlanName = Provider.of<LookupProvider>(context).regularPlanName;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -36,7 +39,7 @@ class SegmentedPlanPicker extends StatelessWidget {
           0: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Text(
-              'Trial',
+              'Weekly Plan',
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 color: value == 0
@@ -48,7 +51,7 @@ class SegmentedPlanPicker extends StatelessWidget {
           1: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Text(
-              'Regular',
+              regularPlanName,
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 color: value == 1

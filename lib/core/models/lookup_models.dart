@@ -81,12 +81,14 @@ class MealSizeModel {
   final String name;
   final String displayName;
   final int sortOrder;
+  final bool isAvailableForOneDayLunch;
 
   MealSizeModel({
     required this.id,
     required this.name,
     required this.displayName,
     this.sortOrder = 0,
+    this.isAvailableForOneDayLunch = true,
   });
 
   factory MealSizeModel.fromJson(Map<String, dynamic> json) {
@@ -95,6 +97,7 @@ class MealSizeModel {
       name: json['name'],
       displayName: json['display_name'],
       sortOrder: int.tryParse('${json['sort_order'] ?? 0}') ?? 0,
+      isAvailableForOneDayLunch: json['is_available_for_one_day_lunch'] ?? true,
     );
   }
 
@@ -104,6 +107,7 @@ class MealSizeModel {
       'name': name,
       'display_name': displayName,
       'sort_order': sortOrder,
+      'is_available_for_one_day_lunch': isAvailableForOneDayLunch,
     };
   }
 
@@ -374,7 +378,7 @@ class DeliveryTimeSettingsModel {
 }
 
 class AllowedAddressModel {
-  final int id;
+  final String id;
   final int stateId;
   final int cityId;
   final String addressLine;
@@ -392,7 +396,7 @@ class AllowedAddressModel {
 
   factory AllowedAddressModel.fromJson(Map<String, dynamic> json) {
     return AllowedAddressModel(
-      id: json['id'] is String ? int.parse(json['id']) : json['id'],
+      id: json['id'].toString(),
       stateId: json['state_id'] is String ? int.parse(json['state_id']) : json['state_id'],
       cityId: json['city_id'] is String ? int.parse(json['city_id']) : json['city_id'],
       addressLine: json['address_line'] ?? '',

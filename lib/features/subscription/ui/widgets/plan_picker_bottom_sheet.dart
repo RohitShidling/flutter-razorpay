@@ -189,6 +189,7 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
   Widget _buildContent(BuildContext context, ScrollController? scrollController) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final subProvider = context.watch<SubscriptionProvider>();
+    final regularPlanName = Provider.of<LookupProvider>(context).regularPlanName;
     final all = subProvider.subscriptions;
     final forSize = _plansForSize(all);
     final regular = forSize.where((p) => p.trialDays == 0).toList();
@@ -306,13 +307,13 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
                         padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
                         children: [
                           if (regular.isNotEmpty) ...[
-                            _sectionTitle('Regular plans', isDark),
+                            _sectionTitle('$regularPlanName plans', isDark),
                             const SizedBox(height: 10),
                             ...regular.map((p) => _planCard(context, p, isDark)),
                             const SizedBox(height: 20),
                           ],
                           if (trial.isNotEmpty) ...[
-                            _sectionTitle('Trial plans', isDark),
+                            _sectionTitle('Weekly plans', isDark),
                             const SizedBox(height: 10),
                             ...trial.map((p) => _planCard(context, p, isDark, isTrial: true)),
                           ],

@@ -714,7 +714,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildCarouselPlaceholder(int index) {
     final titles = [
       'Premium Nutrition',
-      '6-Day Trial Plan',
+      '6-Day Weekly Plan',
       'One-Day Lunch Orders',
       'Authentic Indian Tiffins',
       'Zero Hassle Delivery'

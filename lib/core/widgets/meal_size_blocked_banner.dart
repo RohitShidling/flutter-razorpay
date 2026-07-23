@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:meal_app/features/subscription/ui/screens/meal_size_upgrade_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:meal_app/core/providers/lookup_provider.dart';
 
 /// Persistent banner when meal size cannot be changed directly while subscribed.
 /// Includes a direct 'Resize Meal Pack' button to open the upgrade/downgrade menu for that recipient.
@@ -59,7 +61,11 @@ class MealSizeBlockedBanner extends StatelessWidget {
               ),
             ],
           ),
-          if (entityType != null && entityType!.isNotEmpty && entityId != null && entityId!.isNotEmpty) ...[
+          if (context.watch<LookupProvider>().isMealResizeEnabled &&
+              entityType != null &&
+              entityType!.isNotEmpty &&
+              entityId != null &&
+              entityId!.isNotEmpty) ...[
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,

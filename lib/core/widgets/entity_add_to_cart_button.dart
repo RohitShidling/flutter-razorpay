@@ -4,7 +4,7 @@ import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/subscription/ui/widgets/plan_picker_bottom_sheet.dart';
 
-/// Opens a bottom sheet to pick regular/trial plans for the profile meal size.
+/// Opens a bottom sheet to pick regular/weekly plans for the profile meal size.
 class EntityAddToCartButton extends StatelessWidget {
   final String entityType;
   final String entityId;
