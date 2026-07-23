@@ -123,7 +123,7 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
                   Container(
                     color: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                    child: MealSizeSegmentedControl(
+                    child: MealSizeSegmentedControlWrap(
                       options: segments.map((s) => s.label).toList(),
                       selectedIndex: _selectedSizeIndex.clamp(0, segments.length - 1),
                       onChanged: (i) => _onSegmentChanged(i, segments),
@@ -283,6 +283,7 @@ class _PlanCatalogTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isTrial = plan.trialDays > 0;
+    final regularPlanName = Provider.of<LookupProvider>(context).regularPlanName;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -414,7 +415,7 @@ class _PlanCatalogTile extends StatelessWidget {
                     : null,
               ),
               child: Text(
-                isTrial ? 'TRIAL' : 'Regular',
+                isTrial ? 'WEEKLY PLAN' : regularPlanName,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,

@@ -60,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authProvider = context.read<AuthProvider>();
     final pay = context.watch<PaymentProvider>();
     final referralProvider = context.watch<ReferralProvider>();
+    final lookupProvider = context.watch<LookupProvider>();
     final walletBalance = pay.walletBalance;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final showReferralBadge = referralProvider.hasUnclaimedRewards;
@@ -166,14 +167,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               isDark,
               () => Navigator.of(context).pushReplacementNamed(AppRoutes.mealSkip),
             ),
-            const SizedBox(height: 8),
-            _buildNavigationTile(
-              context,
-              CupertinoIcons.arrow_up_down_circle_fill,
-              'Resize your meal pack',
-              isDark,
-              () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const MealSizeUpgradeScreen())),
-            ),
+            if (lookupProvider.isMealResizeEnabled) ...[
+              const SizedBox(height: 8),
+              _buildNavigationTile(
+                context,
+                CupertinoIcons.arrow_up_down_circle_fill,
+                'Resize your meal pack',
+                isDark,
+                () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const MealSizeUpgradeScreen())),
+              ),
+            ],
             const SizedBox(height: 8),
             _buildNavigationTile(
               context,

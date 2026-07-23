@@ -52,6 +52,14 @@ class LookupProvider with ChangeNotifier {
       if (contactUsInfo is Map) {
         _contactUsInfo = ContactUsModel.fromJson(Map<String, dynamic>.from(contactUsInfo));
       }
+      final planName = raw['regularPlanName'];
+      if (planName is String) {
+        _regularPlanName = planName;
+      }
+      final resizeEnabled = raw['isMealResizeEnabled'];
+      if (resizeEnabled is bool) {
+        _isMealResizeEnabled = resizeEnabled;
+      }
       notifyListeners();
     } catch (_) {
       // ignore cache parse errors
@@ -69,6 +77,8 @@ class LookupProvider with ChangeNotifier {
       'states': _states.map((e) => e.toJson()).toList(),
       'deliveryTimeSettings': _deliveryTimeSettings?.toJson(),
       'contactUsInfo': _contactUsInfo?.toJson(),
+      'regularPlanName': _regularPlanName,
+      'isMealResizeEnabled': _isMealResizeEnabled,
     }, ttl: const Duration(days: 7));
   }
 
@@ -87,6 +97,8 @@ class LookupProvider with ChangeNotifier {
   DeliveryTimeSettingsModel? _deliveryTimeSettings;
   List<LoginCarouselImageModel> _loginCarouselImages = [];
   bool _isReferralActive = true;
+  String _regularPlanName = 'Regular';
+  bool _isMealResizeEnabled = true;
 
   bool _isLoading = false;
   DateTime? _lastFetchedAt;
@@ -103,6 +115,8 @@ class LookupProvider with ChangeNotifier {
   List<CompanyModel> get companies => _companies;
   List<AllowedAddressModel> get allowedAddresses => _allowedAddresses;
   ContactUsModel? get contactUsInfo => _contactUsInfo;
+  String get regularPlanName => _regularPlanName;
+  bool get isMealResizeEnabled => _isMealResizeEnabled;
   DeliveryTimeSettingsModel? get deliveryTimeSettings => _deliveryTimeSettings;
   List<LoginCarouselImageModel> get loginCarouselImages => _loginCarouselImages;
   bool get isReferralActive => _isReferralActive;
@@ -143,6 +157,7 @@ class LookupProvider with ChangeNotifier {
         _repository.getStates(),
         _repository.getDivisions(),
         _repository.getDeliveryTimeSettings(),
+        _repository.getPlanNamingConfig(),
       ]);
 
       _schools = results[0] as List<SchoolModel>;
@@ -153,6 +168,9 @@ class LookupProvider with ChangeNotifier {
       _states = results[5] as List<StateModel>;
       _divisions = results[6] as List<DivisionModel>;
       _deliveryTimeSettings = results[7] as DeliveryTimeSettingsModel?;
+      final namingConfig = results[8] as Map<String, dynamic>;
+      _regularPlanName = (namingConfig['regular_plan_name'] ?? 'Regular').toString();
+      _isMealResizeEnabled = namingConfig['is_meal_resize_enabled'] != false;
       _cities = [];
       _companies = [];
       _lastFetchedAt = DateTime.now();

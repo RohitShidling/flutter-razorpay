@@ -206,4 +206,16 @@ class LookupRepository {
       return {};
     }
   }
+
+  Future<Map<String, dynamic>> getPlanNamingConfig() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.planNaming);
+      if (response.data['success'] == true) {
+        return Map<String, dynamic>.from(response.data['data'] ?? {});
+      }
+      return {};
+    } catch (e) {
+      return {};
+    }
+  }
 }

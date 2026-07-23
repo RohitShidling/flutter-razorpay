@@ -86,6 +86,7 @@ class ApiEndpoints {
   static const String cities = '/api/common/lookup/cities';
   static const String companies = '/api/common/lookup/companies';
   static const String allowedAddresses = '/api/common/lookup/allowed-addresses';
+  static const String planNaming = '/api/common/lookup/plan-naming';
 
   // Common Menu
   static const String commonMenuToday = '/api/common/menu/today';

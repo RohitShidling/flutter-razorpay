@@ -559,7 +559,6 @@ class _AddressFormSheet extends StatefulWidget {
 }
 
 class _AddressFormSheetState extends State<_AddressFormSheet> {
-  final _labelController = TextEditingController();
   final _addressController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -577,7 +576,6 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     super.initState();
     final existing = widget.existingAddress;
     if (existing != null) {
-      _labelController.text = existing.label;
       _addressController.text = existing.addressLine;
       _pincodeController.text = existing.pincode ?? '';
       _phoneController.text = existing.phoneNumber ?? '';
@@ -615,7 +613,6 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
 
   @override
   void dispose() {
-    _labelController.dispose();
     _addressController.dispose();
     _pincodeController.dispose();
     _phoneController.dispose();
@@ -653,12 +650,6 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     final line = allowedAddress.addressLine;
     final pin = allowedAddress.pincode;
 
-    final houseId = _labelController.text.trim();
-    if (houseId.isEmpty) {
-      setState(() => _formError = 'House ID / Flat No is required.');
-      return;
-    }
-
     if (phone.isEmpty) {
       setState(() => _formError = 'Phone number is required.');
       return;
@@ -679,7 +670,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
 
     final address = BulkDeliveryAddress(
       id: widget.existingAddress?.id,
-      label: _labelController.text.trim(),
+      label: line,
       stateId: state.id,
       cityId: city.id,
       addressLine: line,
@@ -887,17 +878,6 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                         counterText: '',
                         hintText: 'Pincode is auto-filled',
                         prefixIcon: Icon(CupertinoIcons.number),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // House ID / Flat No field
-                    TextField(
-                      controller: _labelController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'House ID / Flat No *',
-                        hintText: 'e.g. Flat 101, Building A',
-                        prefixIcon: Icon(CupertinoIcons.house),
                       ),
                     ),
                     const SizedBox(height: 16),

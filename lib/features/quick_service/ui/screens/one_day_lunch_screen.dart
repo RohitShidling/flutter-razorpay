@@ -286,8 +286,20 @@ class _OneDayLunchBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final todayPrice = double.tryParse(cfg['today_price']?.toString() ?? '') ?? 100.0;
-    final nextDayPrice = double.tryParse(cfg['next_day_price']?.toString() ?? '') ?? 90.0;
+    final customPricing = cfg['custom_pricing'] as Map<String, dynamic>?;
+    final sizeIdStr = selectedMealSizeId?.toString() ?? '';
+    final specificPricing = customPricing?[sizeIdStr] as Map<String, dynamic>?;
+
+    final defaultToday = double.tryParse(cfg['today_price']?.toString() ?? '') ?? 100.0;
+    final defaultNext = double.tryParse(cfg['next_day_price']?.toString() ?? '') ?? 90.0;
+
+    final todayPrice = specificPricing != null 
+        ? (double.tryParse(specificPricing['today']?.toString() ?? '') ?? defaultToday)
+        : defaultToday;
+        
+    final nextDayPrice = specificPricing != null
+        ? (double.tryParse(specificPricing['next_day']?.toString() ?? '') ?? defaultNext)
+        : defaultNext;
     final cutoff = cfg['today_cutoff_time']?.toString() ?? '09:00';
     final todayCutoffOpen = _isTodayOrderOpen(cutoff);
     final todaySunday = _isTodaySunday();
@@ -377,47 +389,42 @@ class _OneDayLunchBody extends StatelessWidget {
 
               // ── Meal Size Selector ──
               () {
-                final sizes = context.read<LookupProvider>().mealSizes;
+                final sizes = context.read<LookupProvider>().mealSizes.where((m) => m.isAvailableForOneDayLunch).toList();
                 if (sizes.isEmpty) return const SizedBox.shrink();
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Meal Size', style: TextStyle(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 10),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 10,
                       children: sizes.map((size) {
                         final isSelected = selectedMealSizeId == size.id;
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () => onMealSizeChanged(size.id),
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
+                        return GestureDetector(
+                          onTap: () => onMealSizeChanged(size.id),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                                  : (isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5)),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
                                 color: isSelected
-                                    ? AppTheme.primaryColor.withValues(alpha: 0.08)
-                                    : (isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5)),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppTheme.primaryColor
-                                      : (isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.15)),
-                                  width: isSelected ? 2 : 1,
-                                ),
+                                    ? AppTheme.primaryColor
+                                    : (isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.15)),
+                                width: isSelected ? 2 : 1,
                               ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    size.displayName,
-                                    style: TextStyle(
-                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                      color: isSelected
-                                          ? AppTheme.primaryColor
-                                          : (isDark ? Colors.white70 : Colors.black87),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
+                            ),
+                            child: Text(
+                              size.displayName,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                color: isSelected
+                                    ? AppTheme.primaryColor
+                                    : (isDark ? Colors.white70 : Colors.black87),
+                                fontSize: 14,
                               ),
                             ),
                           ),

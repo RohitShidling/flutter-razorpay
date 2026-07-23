@@ -81,7 +81,8 @@ class EntityPlanActionsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subscribed = _hasSubscribedPlan(context);
-    final showResize = subscribed && _canResizeMealPack(context);
+    final isResizeEnabled = context.watch<LookupProvider>().isMealResizeEnabled;
+    final showResize = subscribed && _canResizeMealPack(context) && isResizeEnabled;
     final resolvedSizeId = _resolvedMealSizeId(context) ?? mealSizeId;
 
     if (!showResize) {

@@ -325,7 +325,7 @@ class _OneDayLunchSheetState extends State<_OneDayLunchSheet> {
   @override
   void initState() {
     super.initState();
-    final sizes = context.read<LookupProvider>().mealSizes;
+    final sizes = context.read<LookupProvider>().mealSizes.where((m) => m.isAvailableForOneDayLunch).toList();
     final recommended = sizes.where((m) => m.displayName.toLowerCase().contains('medium')).firstOrNull;
     _mealSizeId = recommended?.id ?? (sizes.isNotEmpty ? sizes.first.id : null);
   }
@@ -341,9 +341,21 @@ class _OneDayLunchSheetState extends State<_OneDayLunchSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final cfg = context.watch<QuickServiceProvider>().oneDayConfig;
-    final sizes = context.watch<LookupProvider>().mealSizes;
-    final todayPrice = double.tryParse(cfg?['today_price']?.toString() ?? '') ?? 100.0;
-    final nextDayPrice = double.tryParse(cfg?['next_day_price']?.toString() ?? '') ?? 90.0;
+    final sizes = context.watch<LookupProvider>().mealSizes.where((m) => m.isAvailableForOneDayLunch).toList();
+    final customPricing = cfg?['custom_pricing'] as Map<String, dynamic>?;
+    final sizeIdStr = _mealSizeId?.toString() ?? '';
+    final specificPricing = customPricing?[sizeIdStr] as Map<String, dynamic>?;
+
+    final defaultToday = double.tryParse(cfg?['today_price']?.toString() ?? '') ?? 100.0;
+    final defaultNext = double.tryParse(cfg?['next_day_price']?.toString() ?? '') ?? 90.0;
+
+    final todayPrice = specificPricing != null 
+        ? (double.tryParse(specificPricing['today']?.toString() ?? '') ?? defaultToday)
+        : defaultToday;
+        
+    final nextDayPrice = specificPricing != null
+        ? (double.tryParse(specificPricing['next_day']?.toString() ?? '') ?? defaultNext)
+        : defaultNext;
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
