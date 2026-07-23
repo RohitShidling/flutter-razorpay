@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
-import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:meal_app/core/utils/time_utils.dart';
 import 'package:meal_app/core/utils/meal_date.dart';
@@ -35,13 +34,10 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     AppRouteTracker.instance.setCurrent(AppScreen.subscriptionManagement);
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // MEDIUM-09: Wrap in unawaited + catchError so any exception becomes a
-      // handled no-op instead of an unhandled Future rejection.
       unawaited(
         Future.wait([
           context.read<PaymentProvider>().fetchActiveSubscriptions(),
           context.read<PaymentProvider>().fetchPaymentHistory(silent: true),
-          context.read<MealProvider>().fetchSubscriptionStatus(silent: true),
         ]).catchError((_) => []),
       );
     });
@@ -90,7 +86,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Meal Plans & Payments',
+          'Payment History',
           style: TextStyle(
             fontWeight: FontWeight.w800,
             color: isDark ? Colors.white : AppTheme.textPrimaryLight,
@@ -542,18 +538,10 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               ),
               const SizedBox(height: 8),
               
-              // Second row: Date and amount
+              // Second row: amount
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(
-                    DateFormat('dd MMM yyyy, hh:mm a').format(date),
-                    style: TextStyle(
-                      color: isDark ? Colors.white38 : AppTheme.textSecondaryLight,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
                   if (orderType != 'referral_reward' && orderType != 'referral_applied')
                     Text(
                       '₹$amount',
@@ -613,6 +601,18 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                     _buildRoleBadge(entityType, isDark),
                   ],
                 ],
+              ),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  DateFormat('dd MMM yyyy, hh:mm a').format(date),
+                  style: TextStyle(
+                    color: isDark ? Colors.white38 : AppTheme.textSecondaryLight,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
               
               // Third block: Meta details if applicable (Saturday option, Size, Time etc.)

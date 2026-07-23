@@ -39,18 +39,31 @@ class QuickServiceProvider with ChangeNotifier {
   // TTL guards
 
   DateTime? _lastCategoriesFetchedAt;
+  DateTime? _lastOneDayConfigFetchedAt;
+  DateTime? _lastSpecialConfigFetchedAt;
+  DateTime? _lastCartFetchedAt;
   final Map<String, DateTime> _lastItemsFetchedAt = {};
-
-
 
   bool _isCategoriesFresh() =>
       _lastCategoriesFetchedAt != null &&
       DateTime.now().difference(_lastCategoriesFetchedAt!).inHours < 6;
 
+  bool _isOneDayConfigFresh() =>
+      _lastOneDayConfigFetchedAt != null &&
+      DateTime.now().difference(_lastOneDayConfigFetchedAt!).inHours < 6;
+
+  bool _isSpecialConfigFresh() =>
+      _lastSpecialConfigFetchedAt != null &&
+      DateTime.now().difference(_lastSpecialConfigFetchedAt!).inHours < 6;
+
   bool _isItemsFresh(String categoryId) {
     final t = _lastItemsFetchedAt[categoryId];
     return t != null && DateTime.now().difference(t).inMinutes < 60;
   }
+
+  bool _isCartFresh() =>
+      _lastCartFetchedAt != null &&
+      DateTime.now().difference(_lastCartFetchedAt!).inSeconds < 90;
 
   Map<String, dynamic>? _oneDayConfig;
   Map<String, dynamic>? get oneDayConfig => _oneDayConfig;
@@ -96,7 +109,8 @@ class QuickServiceProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<BulkDeliveryAddress?> loadSavedDeliveryAddress() async {
+  Future<BulkDeliveryAddress?> loadSavedDeliveryAddress({bool force = false}) async {
+    if (!force && _address != null) return _address;
     try {
       final data = await _repository.getSavedDeliveryAddress();
       if (data == null) return null;
@@ -121,6 +135,8 @@ class QuickServiceProvider with ChangeNotifier {
   }
 
   Future<void> loadOneDayConfig({bool force = false}) async {
+    if (!force && _oneDayConfig != null && _isOneDayConfigFresh()) return;
+
     if (_oneDayConfig == null) {
       _loading = true;
       _error = null;
@@ -136,6 +152,7 @@ class QuickServiceProvider with ChangeNotifier {
 
     try {
       _oneDayConfig = await _repository.getOneDayLunchConfig();
+      _lastOneDayConfigFetchedAt = DateTime.now();
       await CacheStore.setJson('one_day_lunch_config', _oneDayConfig, ttl: const Duration(hours: 6));
       _error = null;
     } catch (e) {
@@ -149,6 +166,8 @@ class QuickServiceProvider with ChangeNotifier {
   }
 
   Future<void> loadSpecialConfig({bool force = false}) async {
+    if (!force && _specialConfig != null && _isSpecialConfigFresh()) return;
+
     if (_specialConfig == null) {
       _loading = true;
       _error = null;
@@ -164,6 +183,7 @@ class QuickServiceProvider with ChangeNotifier {
 
     try {
       _specialConfig = await _repository.getSpecialDishConfig();
+      _lastSpecialConfigFetchedAt = DateTime.now();
       await CacheStore.setJson('special_dish_config', _specialConfig, ttl: const Duration(hours: 6));
       _error = null;
     } catch (e) {
@@ -183,7 +203,7 @@ class QuickServiceProvider with ChangeNotifier {
 
   Future<void> loadCategories({bool force = false}) async {
     // Skip API if data is fresh in memory
-    if (!force && _categories.isNotEmpty && _isCategoriesFresh()) return;
+    if (!force && _isCategoriesFresh()) return;
 
     if (_categories.isEmpty) {
       _loading = true;
@@ -269,7 +289,9 @@ class QuickServiceProvider with ChangeNotifier {
     }
   }
 
-  Future<void> loadCartFromServer() async {
+  Future<void> loadCartFromServer({bool force = false}) async {
+    if (!force && _isCartFresh()) return;
+
     _loading = true;
     _error = null;
     notifyListeners();
@@ -299,6 +321,7 @@ class QuickServiceProvider with ChangeNotifier {
           }
         } catch (_) {}
       }
+      _lastCartFetchedAt = DateTime.now();
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -314,12 +337,14 @@ class QuickServiceProvider with ChangeNotifier {
     } else {
       _cartQty[itemId] = qty;
     }
+    _lastCartFetchedAt = DateTime.now();
     notifyListeners();
     _persistCart();
   }
 
   void clearCart() {
     _cartQty.clear();
+    _lastCartFetchedAt = DateTime.now();
     notifyListeners();
     _persistCart();
   }
@@ -464,6 +489,9 @@ class QuickServiceProvider with ChangeNotifier {
     _categoryItemsMemoryCache.clear();
     _address = null;
     _lastCategoriesFetchedAt = null;
+    _lastOneDayConfigFetchedAt = null;
+    _lastSpecialConfigFetchedAt = null;
+    _lastCartFetchedAt = null;
     _lastItemsFetchedAt.clear();
     notifyListeners();
   }

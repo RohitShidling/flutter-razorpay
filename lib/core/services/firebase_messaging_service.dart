@@ -69,8 +69,8 @@ class FirebaseMessagingService {
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
       dev.log('FCM background message handler registered.');
 
-      // 2. Request permissions
-      await _requestPermissions();
+      // 2. Request permissions (now deferred to post-startup Login screen)
+      // await _requestPermissions();
 
       // 3. Obtain and log FCM token
       await _getAndLogFcmToken();
@@ -122,6 +122,12 @@ class FirebaseMessagingService {
     if (NetworkStatusService.instance.isOnline) {
       syncToken();
     }
+  }
+
+  Future<void> requestNotificationPermissions() async {
+    await _requestPermissions();
+    await _getAndLogFcmToken();
+    await syncToken(force: true);
   }
 
   /// Request notification permissions for Firebase and local notifications.

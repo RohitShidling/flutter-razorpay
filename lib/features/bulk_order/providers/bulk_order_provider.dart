@@ -97,6 +97,7 @@ class BulkOrderProvider with ChangeNotifier {
 
   DateTime? _lastConfigFetchTime;
   DateTime? _lastCategoriesFetchTime;
+  DateTime? _lastCartFetchTime;
   final Map<String, DateTime> _lastMealsFetchTime = {};
 
   bool _isCacheValid(DateTime? lastFetchTime) {
@@ -105,9 +106,12 @@ class BulkOrderProvider with ChangeNotifier {
   }
 
   bool _canReuseCache(DateTime? lastFetchTime) {
-    return _isCacheValid(lastFetchTime) &&
-        !NetworkStatusService.instance.isOnline;
+    return _isCacheValid(lastFetchTime);
   }
+
+  bool _isCartFresh() =>
+      _lastCartFetchTime != null &&
+      DateTime.now().difference(_lastCartFetchTime!).inSeconds < 90;
 
   int _compareYmd(String a, String b) {
     return a.compareTo(b);
@@ -174,6 +178,7 @@ class BulkOrderProvider with ChangeNotifier {
     _varietyMealCatalog.clear();
     _mealCategoryNames.clear();
     _mealCategoryIds.clear();
+    _lastCartFetchTime = DateTime.now();
     notifyListeners();
     _scheduleCartSync();
   }
@@ -181,6 +186,7 @@ class BulkOrderProvider with ChangeNotifier {
   void clearStandardDraft() {
     _standardQty = null;
     _standardDeliveryDate = null;
+    _lastCartFetchTime = DateTime.now();
     notifyListeners();
     _scheduleCartSync();
   }
@@ -200,6 +206,7 @@ class BulkOrderProvider with ChangeNotifier {
         _standardDeliveryDate = deliveryDate;
       }
     }
+    _lastCartFetchTime = DateTime.now();
     notifyListeners();
     _scheduleCartSync();
   }
@@ -455,6 +462,7 @@ class BulkOrderProvider with ChangeNotifier {
         _mealCategoryIds[mealId] = categoryId;
       }
     }
+    _lastCartFetchTime = DateTime.now();
     notifyListeners();
     _scheduleCartSync();
   }
@@ -556,16 +564,20 @@ class BulkOrderProvider with ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> loadCartFromServer() async {
+  Future<void> loadCartFromServer({bool force = false}) async {
+    if (!force && _isCartFresh()) return;
+
     try {
       final payload = await _repository.getCartDraft();
       if (payload == null || payload.isEmpty) {
         clearBulkCart();
         await CacheStore.remove('bulk_cart_draft');
+        _lastCartFetchTime = DateTime.now();
         return;
       }
       _applyCartPayload(payload);
       await CacheStore.setJson('bulk_cart_draft', _cartPayload(), ttl: const Duration(days: 30));
+      _lastCartFetchTime = DateTime.now();
 
       // Load variety meal details if there are variety lines in the cart
       if (_varietyQty.isNotEmpty) {
@@ -624,13 +636,14 @@ class BulkOrderProvider with ChangeNotifier {
   Future<void> clearServerCart() async {
     try {
       await _repository.deleteCartDraft();
+      _lastCartFetchTime = DateTime.now();
     } catch (_) {}
   }
 
   int varietyQtyFor(String mealId) => _varietyQty[mealId] ?? 0;
 
   Future<void> loadVarietyCategories({bool force = false}) async {
-    if (!force && _varietyCategories.isNotEmpty && _canReuseCache(_lastCategoriesFetchTime)) {
+    if (!force && _canReuseCache(_lastCategoriesFetchTime)) {
       return;
     }
 
@@ -665,7 +678,12 @@ class BulkOrderProvider with ChangeNotifier {
   }
 
   Future<void> loadMealsForCategory(String categoryId, {String? categoryName, bool force = false}) async {
-    if (!force && _categoryMeals.isNotEmpty && _canReuseCache(_lastMealsFetchTime[categoryId])) {
+    if (!force && _canReuseCache(_lastMealsFetchTime[categoryId])) {
+      final cachedList = await CacheStore.getJsonList('bulk_meals_category_$categoryId');
+      if (cachedList.isNotEmpty) {
+        _categoryMeals = cachedList.map(BulkMenuOption.fromJson).toList();
+        notifyListeners();
+      }
       return;
     }
 
@@ -958,6 +976,7 @@ class BulkOrderProvider with ChangeNotifier {
     _lastQuote = null;
     _lastConfigFetchTime = null;
     _lastCategoriesFetchTime = null;
+    _lastCartFetchTime = null;
     _lastMealsFetchTime.clear();
     notifyListeners();
   }

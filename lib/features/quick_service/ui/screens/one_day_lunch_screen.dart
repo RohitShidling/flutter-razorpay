@@ -9,6 +9,7 @@ import 'package:meal_app/features/quick_service/providers/quick_service_provider
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_section.dart';
 import 'package:meal_app/features/quick_service/ui/widgets/quick_service_checkout.dart';
+import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/utils/time_utils.dart';
 import 'package:meal_app/core/widgets/responsive_layout.dart';
 
@@ -64,6 +65,7 @@ class OneDayLunchScreen extends StatefulWidget {
 class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
   late String _deliveryType;
   int _quantity = 1;
+  int? _selectedMealSizeId;
   bool _isScreenLoading = true;
 
   @override
@@ -83,6 +85,7 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
       final p = context.read<QuickServiceProvider>();
       final bulk = context.read<BulkOrderProvider>();
       final menu = context.read<MenuProvider>();
+      final lookup = context.read<LookupProvider>();
 
       // Always force-refresh config — cutoff time is real-time admin data.
       // Running in parallel with the other fetches for speed.
@@ -91,6 +94,7 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
         bulk.loadSavedDeliveryAddress(),
         menu.fetchTodayMenu(force: true, silent: true),
         menu.fetchWeeklyMenuSilent(),
+        lookup.fetchMealSizesOnly(),
       ]);
 
       if (!mounted) return;
@@ -101,6 +105,12 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
 
       final todayMenu = menu.todayMenu;
       p.setTodayMenu(todayMenu == null ? null : Map<String, dynamic>.from(todayMenu));
+
+      final sizes = lookup.mealSizes;
+      if (_selectedMealSizeId == null && sizes.isNotEmpty) {
+        final recommended = sizes.where((m) => m.displayName.toLowerCase().contains('medium')).firstOrNull;
+        _selectedMealSizeId = recommended?.id ?? sizes.first.id;
+      }
 
       // Re-evaluate cutoff now that fresh config is loaded.
       if (mounted) {
@@ -136,6 +146,7 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
       context,
       deliveryType: _deliveryType,
       quantity: _quantity,
+      mealSizeId: _selectedMealSizeId,
       skipAddressPrompt: true,
     );
   }
@@ -224,9 +235,11 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
                 isDark: isDark,
                 deliveryType: _deliveryType,
                 quantity: _quantity,
+                selectedMealSizeId: _selectedMealSizeId,
                 isLoading: data.isLoading,
                 onDeliveryTypeChanged: (v) => setState(() => _deliveryType = v),
                 onQuantityChanged: (v) => setState(() => _quantity = v),
+                onMealSizeChanged: (id) => setState(() => _selectedMealSizeId = id),
                 onPay: _pay,
               ),
             );
@@ -250,9 +263,11 @@ class _OneDayLunchBody extends StatelessWidget {
     required this.isDark,
     required this.deliveryType,
     required this.quantity,
+    required this.selectedMealSizeId,
     required this.isLoading,
     required this.onDeliveryTypeChanged,
     required this.onQuantityChanged,
+    required this.onMealSizeChanged,
     required this.onPay,
   });
 
@@ -262,9 +277,11 @@ class _OneDayLunchBody extends StatelessWidget {
   final bool isDark;
   final String deliveryType;
   final int quantity;
+  final int? selectedMealSizeId;
   final bool isLoading;
   final ValueChanged<String> onDeliveryTypeChanged;
   final ValueChanged<int> onQuantityChanged;
+  final ValueChanged<int> onMealSizeChanged;
   final VoidCallback onPay;
 
   @override
@@ -357,6 +374,60 @@ class _OneDayLunchBody extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
+
+              // ── Meal Size Selector ──
+              () {
+                final sizes = context.read<LookupProvider>().mealSizes;
+                if (sizes.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Meal Size', style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: sizes.map((size) {
+                        final isSelected = selectedMealSizeId == size.id;
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () => onMealSizeChanged(size.id),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                                    : (isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5)),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppTheme.primaryColor
+                                      : (isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.15)),
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    size.displayName,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                      color: isSelected
+                                          ? AppTheme.primaryColor
+                                          : (isDark ? Colors.white70 : Colors.black87),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              }(),
 
               // ── Delivery address — single const widget, stays alive ───
               const BulkOrderAddressSection(showDeliveryTime: true),

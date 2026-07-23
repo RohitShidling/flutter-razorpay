@@ -50,9 +50,18 @@ class MenuProvider with ChangeNotifier {
       _lastWeeklyFetchedAt != null &&
       DateTime.now().difference(_lastWeeklyFetchedAt!).inMinutes < 60;
 
-  bool _isTodayFresh() =>
-      _lastTodayFetchedAt != null &&
-      DateTime.now().difference(_lastTodayFetchedAt!).inMinutes < 10;
+  bool _isTodayFresh() {
+    if (_lastTodayFetchedAt == null || _todayMenu == null) return false;
+    final now = DateTime.now();
+    final sameDay = _lastTodayFetchedAt!.year == now.year &&
+        _lastTodayFetchedAt!.month == now.month &&
+        _lastTodayFetchedAt!.day == now.day;
+    return sameDay && now.difference(_lastTodayFetchedAt!).inHours < 6;
+  }
+
+  void invalidateWeeklyMenuCache() {
+    _lastWeeklyFetchedAt = null;
+  }
 
   String _normalizeDateKey(dynamic raw) {
     final value = raw?.toString() ?? '';

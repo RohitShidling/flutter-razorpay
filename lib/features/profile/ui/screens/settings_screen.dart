@@ -13,7 +13,6 @@ import 'package:meal_app/features/subscription/ui/screens/meal_size_upgrade_scre
 import 'package:meal_app/features/subscription/ui/screens/wallet_screen.dart';
 import 'package:meal_app/features/profile/ui/screens/profile_details_screen.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
-import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/models/lookup_models.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
@@ -138,7 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildNavigationTile(
               context,
               CupertinoIcons.creditcard_fill, 
-              'Meal Plans & Payments', 
+              'Payment History', 
               isDark,
               () {
                 Navigator.push(
@@ -181,9 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               CupertinoIcons.cart_fill,
               'Cart',
               isDark,
-              () async {
-                await context.read<CartProvider>().fetchCart(force: true);
-                if (!context.mounted) return;
+              () {
                 Navigator.push(context, CupertinoPageRoute(builder: (_) => const CartScreen()));
               },
             ),
@@ -265,9 +262,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 50),
             
-            _buildLogoutButton(context, authProvider),
-            const SizedBox(height: 12),
             _buildDeleteAccountButton(context, authProvider),
+            const SizedBox(height: 12),
+            _buildLogoutButton(context, authProvider),
           ],
         ),
       ),

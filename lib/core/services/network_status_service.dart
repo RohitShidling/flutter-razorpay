@@ -42,6 +42,8 @@ class NetworkStatusService with ChangeNotifier {
   DioClient? _dioClient;
   bool _processingQueue = false;
   bool _refreshInFlight = false;
+  DateTime? _lastHealthCheckTime;
+  bool _lastHealthResult = false;
 
   final List<VoidCallback> _becameOnlineListeners = [];
   final List<VoidCallback> _onQueueReplayedListeners = [];
@@ -170,6 +172,11 @@ class NetworkStatusService with ChangeNotifier {
   }
 
   Future<bool> _checkBackendHealth() async {
+    if (_lastHealthCheckTime != null &&
+        DateTime.now().difference(_lastHealthCheckTime!).inSeconds < 30) {
+      return _lastHealthResult;
+    }
+    _lastHealthCheckTime = DateTime.now();
     try {
       final dio = Dio(BaseOptions(
         baseUrl: ApiEndpoints.baseUrl,
@@ -179,10 +186,13 @@ class NetworkStatusService with ChangeNotifier {
       ));
       final res = await dio.get(ApiEndpoints.health);
       if (res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300) {
+        _lastHealthResult = true;
         return true;
       }
+      _lastHealthResult = false;
       return false;
     } catch (_) {
+      _lastHealthResult = false;
       return false;
     }
   }

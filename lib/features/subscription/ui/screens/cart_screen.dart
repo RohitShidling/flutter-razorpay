@@ -37,6 +37,8 @@ class _CartScreenState extends State<CartScreen> {
   CartProvider? _cartProvider;
   String? _localError;
 
+  bool _isInitialized = false;
+
   static double _parseMoney(dynamic value) {
     if (value == null) return 0;
     return double.tryParse(value.toString().replaceAll(',', '')) ?? 0;
@@ -58,9 +60,9 @@ class _CartScreenState extends State<CartScreen> {
         // AUDIT-056: Prefer stable school_id lookup; fall back to name-match for
         // legacy profiles that pre-date the school_id field.
         final school = (teacher.schoolId != null && teacher.schoolId!.isNotEmpty)
-            ? lookup.schools.where((s) => s.id == teacher.schoolId).firstOrNull ??
-              lookup.schools.where((s) => s.name == teacher.schoolCollegeName).firstOrNull
-            : lookup.schools.where((s) => s.name == teacher.schoolCollegeName).firstOrNull;
+             ? lookup.schools.where((s) => s.id == teacher.schoolId).firstOrNull ??
+               lookup.schools.where((s) => s.name == teacher.schoolCollegeName).firstOrNull
+             : lookup.schools.where((s) => s.name == teacher.schoolCollegeName).firstOrNull;
         return school?.extraAmount ?? 0.0;
       }
     } else if (item.entityType == 'professional') {
@@ -92,11 +94,16 @@ class _CartScreenState extends State<CartScreen> {
       _cartProvider = cart;
       cart.addListener(_scheduleWalletPreview);
       await context.read<PaymentProvider>().fetchWallet(silent: true);
-      await cart.fetchCart(force: true);
+      await cart.fetchCart(force: false);
       cart.syncOfflineItemsIfAny();
       if (!mounted) return;
-      context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true);
+      context.read<SubscriptionProvider>().fetchSubscriptions(force: false, silent: true);
       _refreshWalletPreview(cart);
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     });
   }
 
@@ -220,7 +227,7 @@ class _CartScreenState extends State<CartScreen> {
             navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
           ),
         ),
-      body: cartProvider.isLoading && items.isEmpty
+      body: (!_isInitialized || (cartProvider.isLoading && items.isEmpty))
           ? const Center(child: CircularProgressIndicator())
           : items.isEmpty
               ? _buildEmptyCart(isDark)
@@ -332,15 +339,26 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildEmptyCart(bool isDark) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(CupertinoIcons.cart, size: 80, color: isDark ? Colors.white24 : Colors.grey.withValues(alpha: 0.3)),
-          const SizedBox(height: 24),
-          Text('Your cart is empty', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
-          const SizedBox(height: 8),
-          Text('Add subscriptions from the Resize meal pack screen', style: TextStyle(color: isDark ? Colors.white54 : AppTheme.textSecondaryLight)),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(CupertinoIcons.cart, size: 80, color: isDark ? Colors.white24 : Colors.grey.withValues(alpha: 0.3)),
+            const SizedBox(height: 24),
+            Text(
+              'Your cart is empty',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add subscriptions from the Resize meal pack screen',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+            ),
+          ],
+        ),
       ),
     );
   }

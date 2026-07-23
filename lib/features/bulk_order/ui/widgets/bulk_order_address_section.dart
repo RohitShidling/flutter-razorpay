@@ -40,7 +40,7 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
     _deliveryTimeController =
         widget.deliveryTimeController ?? TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LookupProvider>().fetchInitialData();
+      context.read<LookupProvider>().fetchProfessionalLookups();
       context.read<BulkOrderProvider>().loadSavedDeliveryAddresses();
     });
   }
@@ -788,7 +788,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       loadingGetter: () => lookup.isLoading,
                       onInteraction: () {
                         FocusScope.of(context).unfocus();
-                        lookup.fetchInitialData();
+                        lookup.fetchProfessionalLookups();
                       },
                       onChanged: (v) {
                         setState(() {

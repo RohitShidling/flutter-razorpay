@@ -10,6 +10,7 @@ import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/features/children/providers/children_provider.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
+import 'package:meal_app/features/home/providers/menu_provider.dart';
 import 'package:meal_app/core/services/app_route_tracker.dart';
 import 'package:meal_app/features/home/ui/widgets/bottom_footer_nav.dart';
 import 'package:meal_app/core/navigation/app_routes.dart';
@@ -783,6 +784,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                 final success = await mealProvider.cancelSkip(id is int ? id : int.tryParse(id.toString()) ?? 0);
                 if (!mounted) return;
                 if (success) {
+                  if (mounted) context.read<MenuProvider>().invalidateWeeklyMenuCache();
                   ErrorHandler.showSuccess(context, 'Skip cancelled successfully');
                 } else {
                   ErrorHandler.showError(context, mealProvider.error);
@@ -820,6 +822,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     final success = await mealProvider.deleteSkip(skipId);
     if (context.mounted) {
       if (success) {
+        context.read<MenuProvider>().invalidateWeeklyMenuCache();
         ErrorHandler.showSuccess(context, 'Skip deleted successfully');
       } else {
         ErrorHandler.showError(context, mealProvider.error);
@@ -1301,6 +1304,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
 
                                 if (!sheetCtx.mounted) return;
                                 if (success) {
+                                  sheetCtx.read<MenuProvider>().invalidateWeeklyMenuCache();
                                   Navigator.pop(sheetCtx);
                                   messenger.showSnackBar(const SnackBar(
                                     content: Text('Meal skip scheduled successfully!'),

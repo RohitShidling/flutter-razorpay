@@ -54,7 +54,7 @@ class ChildrenProvider with ChangeNotifier {
     final isFresh = _lastFetchedAt != null &&
         DateTime.now().difference(_lastFetchedAt!).inMinutes < 5;
     // Skip if data is fresh in memory (online or offline), unless forced
-    if (!force && _children.isNotEmpty && isFresh) return;
+    if (!force && isFresh) return;
     if (_inflightRequest != null) return _inflightRequest;
 
     final request = _doFetch(silent: silent);

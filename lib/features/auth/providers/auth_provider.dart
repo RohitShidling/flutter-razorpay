@@ -408,9 +408,22 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void>? _inflightProfileRequest;
+
   Future<void> refreshMeProfile({bool silent = false, bool forceNetwork = false}) async {
     if (!forceNetwork && _isProfileFresh()) return;
+    if (_inflightProfileRequest != null) return _inflightProfileRequest!;
 
+    final request = _doRefreshMeProfile(silent: silent, forceNetwork: forceNetwork);
+    _inflightProfileRequest = request;
+    try {
+      await request;
+    } finally {
+      _inflightProfileRequest = null;
+    }
+  }
+
+  Future<void> _doRefreshMeProfile({bool silent = false, bool forceNetwork = false}) async {
     if (!silent) {
       _isProfileLoading = true;
       notifyListeners();

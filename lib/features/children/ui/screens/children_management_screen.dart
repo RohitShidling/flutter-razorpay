@@ -36,17 +36,25 @@ class ChildrenManagementScreen extends StatefulWidget {
 }
 
 class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
     AppRouteTracker.instance.setCurrent(AppScreen.children);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LookupProvider>().fetchInitialData(force: true);
-      context.read<ChildrenProvider>().fetchChildren(force: true).then((_) {
-        _triggerRenewIfRequested();
-      });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
+      await Future.wait([
+        context.read<LookupProvider>().fetchChildrenLookups(force: false),
+        context.read<ChildrenProvider>().fetchChildren(force: false),
+      ]);
+      _triggerRenewIfRequested();
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     });
   }
 
@@ -132,10 +140,10 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
                   onRefresh: () async {
                     await Future.wait([
                       childrenProvider.fetchChildren(force: true),
-                      context.read<LookupProvider>().fetchInitialData(force: true),
+                      context.read<LookupProvider>().fetchChildrenLookups(force: true),
                     ]);
                   },
-                  child: childrenProvider.isLoading && children.isEmpty
+                  child: (!_isInitialized || (childrenProvider.isLoading && children.isEmpty))
                       ? const Center(child: CircularProgressIndicator())
                       : ResponsiveContainer(
                           child: ListView(
@@ -549,7 +557,7 @@ class _ChildFormState extends State<_ChildForm> {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final lookup = context.read<LookupProvider>();
-        await lookup.fetchInitialData();
+        await lookup.fetchChildrenLookups();
         if (mounted) {
           await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
         }
@@ -903,7 +911,7 @@ class _ChildFormState extends State<_ChildForm> {
                 validator: (v) => Validators.requiredField(v, 'School/College'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
-                  lookup.fetchInitialData();
+                  lookup.fetchChildrenLookups();
                 },
                 onChanged: (v) {
                   setState(() {
@@ -1002,7 +1010,7 @@ class _ChildFormState extends State<_ChildForm> {
                 validator: (v) => Validators.requiredField(v, 'Standard'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
-                  lookup.fetchInitialData();
+                  lookup.fetchChildrenLookups();
                 },
                 onChanged: (v) {
                   setState(() {
@@ -1031,7 +1039,7 @@ class _ChildFormState extends State<_ChildForm> {
                 loadingGetter: () => lookup.isLoading,
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
-                  lookup.fetchInitialData();
+                  lookup.fetchChildrenLookups();
                 },
                 onChanged: (v) {
                   setState(() {
@@ -1056,7 +1064,7 @@ class _ChildFormState extends State<_ChildForm> {
                 validator: (v) => Validators.requiredField(v, 'State'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
-                  lookup.fetchInitialData();
+                  lookup.fetchChildrenLookups();
                 },
                 onChanged: (v) {
                   if (_schoolLocksLocation) return;
@@ -1121,7 +1129,7 @@ class _ChildFormState extends State<_ChildForm> {
                 validator: (v) => Validators.requiredField(v, 'Meal Size'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
-                  lookup.fetchInitialData();
+                  lookup.fetchChildrenLookups();
                 },
                 onChanged: (v) {
                   if (_blocksMealSizeChange) {

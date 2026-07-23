@@ -196,7 +196,7 @@ class CartProvider with ChangeNotifier {
     final isFresh = _lastFetchedAt != null &&
         DateTime.now().difference(_lastFetchedAt!).inSeconds < 90;
     // Always reconcile with server when the cart may have changed (checkout, reconnect).
-    if (!force && silent && _items.isNotEmpty && isFresh) return;
+    if (!force && silent && isFresh) return;
     if (_inflightFetch != null) return _inflightFetch;
 
     final request = _doFetchCart(silent: silent);

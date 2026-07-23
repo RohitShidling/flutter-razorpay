@@ -61,10 +61,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     try {
       await Future.wait([
         context.read<ReferralProvider>().fetchRewards(),
-        context.read<AuthProvider>().refreshMeProfile(silent: silent, forceNetwork: true),
-        context.read<ChildrenProvider>().fetchChildren(force: true, silent: silent),
-        context.read<ProfileProvider>().fetchProfiles(force: true, silent: silent),
-        context.read<MealProvider>().fetchSubscriptionStatus(silent: silent),
+        context.read<AuthProvider>().refreshMeProfile(silent: silent),
       ]);
     } catch (_) {}
   }

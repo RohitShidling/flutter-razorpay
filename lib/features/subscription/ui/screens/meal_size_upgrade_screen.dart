@@ -75,6 +75,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
   int? _toMealSizeId;
   String? _walletBalance;
   bool _eligible = false;
+  String? _eligibleMessage;
   bool _useWallet = true;
   bool _loadingWalletPreview = false;
   double? _walletApplied;
@@ -207,6 +208,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
         _currentSizeName = _trim(payload['current_meal_size_name']);
         _walletBalance = _trim(payload['wallet_balance']);
         _eligible = eligible;
+        _eligibleMessage = _trim(payload['message']);
         if (_currentSizeName!.isNotEmpty && _selectedSubIndex < pay.activeSubscriptions.length) {
           final selected = pay.activeSubscriptions[_selectedSubIndex];
           if (selected is Map) {
@@ -228,6 +230,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
         _error = ErrorHandler.getErrorMessage(e);
         _upgradeOptions = [];
         _eligible = false;
+        _eligibleMessage = null;
       });
     } finally {
       if (mounted) setState(() => _loadingOptions = false);
@@ -930,7 +933,9 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                                 ),
                                 child: Text(
                                   !_eligible
-                                      ? 'This profile does not have an active meal plan yet. Buy a meal plan first, then resize options will appear here.'
+                                      ? (_eligibleMessage != null && _eligibleMessage!.isNotEmpty
+                                          ? _eligibleMessage!
+                                          : 'This profile does not have an active meal plan yet. Buy a meal plan first, then resize options will appear here.')
                                       : 'No resizing path is published from your current size yet. Contact support if you need to change your pack.',
                                   style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : AppTheme.textPrimaryLight),
                                 ),

@@ -77,17 +77,25 @@ class TeacherManagementScreen extends StatefulWidget {
 }
 
 class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
     AppRouteTracker.instance.setCurrent(AppScreen.teacherProfile);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LookupProvider>().fetchInitialData(force: true);
-      context.read<ProfileProvider>().fetchProfiles(force: true).then((_) {
-        _triggerRenewIfRequested();
-      });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
+      await Future.wait([
+        context.read<LookupProvider>().fetchTeacherLookups(force: false),
+        context.read<ProfileProvider>().fetchProfiles(force: false),
+      ]);
+      _triggerRenewIfRequested();
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     });
   }
 
@@ -172,10 +180,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                     onRefresh: () async {
                       await Future.wait([
                         profileProvider.fetchProfiles(force: true),
-                        context.read<LookupProvider>().fetchInitialData(force: true),
+                        context.read<LookupProvider>().fetchTeacherLookups(force: true),
                       ]);
                     },
-                    child: profileProvider.isLoading && profiles.isEmpty
+                    child: (!_isInitialized || (profileProvider.isLoading && profiles.isEmpty))
                         ? const Center(child: CircularProgressIndicator())
                         : ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -519,7 +527,7 @@ class _TeacherFormState extends State<_TeacherForm> {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final lookup = context.read<LookupProvider>();
-        await lookup.fetchInitialData();
+        await lookup.fetchTeacherLookups();
         if (mounted) {
           await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
         }
@@ -823,7 +831,7 @@ class _TeacherFormState extends State<_TeacherForm> {
                     validator: (v) => Validators.requiredField(v, 'School/College'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
-                      lookup.fetchInitialData();
+                      lookup.fetchTeacherLookups();
                     },
                     onChanged: (v) {
                       setState(() {
@@ -892,7 +900,7 @@ class _TeacherFormState extends State<_TeacherForm> {
                     validator: (v) => Validators.requiredField(v, 'State'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
-                      lookup.fetchInitialData();
+                      lookup.fetchTeacherLookups();
                     },
                     onChanged: (v) {
                       setState(() {
@@ -954,7 +962,7 @@ class _TeacherFormState extends State<_TeacherForm> {
                     validator: (v) => Validators.requiredField(v, 'Meal Size'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
-                      lookup.fetchInitialData();
+                      lookup.fetchTeacherLookups();
                     },
                     onChanged: (v) {
                       if (_blocksMealSizeChange) {

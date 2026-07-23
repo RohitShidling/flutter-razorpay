@@ -24,7 +24,7 @@ class PlanPickerBottomSheet {
     required String entityName,
     required int mealSizeId,
   }) async {
-    await context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true);
+    await context.read<SubscriptionProvider>().fetchSubscriptions(force: false, silent: true);
     if (!context.mounted) return;
 
     final width = MediaQuery.sizeOf(context).width;

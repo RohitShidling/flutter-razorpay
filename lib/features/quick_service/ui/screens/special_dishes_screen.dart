@@ -25,18 +25,17 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final p = context.read<QuickServiceProvider>();
-      await p.loadCategories();
-      if (!mounted) return;
-      await p.loadCartFromServer();
-      if (!mounted) return;
       final bulk = context.read<BulkOrderProvider>();
-      await bulk.loadSavedDeliveryAddress();
+
+      await Future.wait([
+        p.loadCategories(),
+        p.loadCartFromServer(),
+        bulk.loadSavedDeliveryAddress(),
+      ]);
+
       if (!mounted) return;
-      final backendAddr = await p.loadSavedDeliveryAddress();
-      if (!mounted) return;
-      final addr = backendAddr ?? bulk.deliveryAddress;
+      final addr = bulk.deliveryAddress;
       if (addr != null) {
-        bulk.setDeliveryAddress(addr);
         p.setAddress(addr);
       }
       

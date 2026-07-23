@@ -113,9 +113,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       final provider = context.read<ProfileProvider>();
       final lookupProvider = context.read<LookupProvider>();
       
-      // Fetch lookup data first so dropdowns are ready
-      await lookupProvider.fetchInitialData(force: true);
-      await provider.fetchProfiles(force: true, silent: false);
+      await lookupProvider.fetchTeacherLookups(force: false);
+      await provider.fetchProfiles(force: false, silent: false);
       if (mounted) {
         await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
         if (!mounted) return;
@@ -446,7 +445,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       validator: (v) => Validators.requiredField(v, 'School/College'),
                       onInteraction: () {
                         FocusScope.of(context).unfocus();
-                        lookupProvider.fetchInitialData();
+                        lookupProvider.fetchTeacherLookups();
                       },
                       onChanged: (v) {
                         setState(() {
@@ -516,7 +515,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       validator: (v) => Validators.requiredField(v, 'State'),
                       onInteraction: () {
                         FocusScope.of(context).unfocus();
-                        lookupProvider.fetchInitialData();
+                        lookupProvider.fetchTeacherLookups();
                       },
                       onChanged: (v) {
                         setState(() {
@@ -581,7 +580,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       validator: (v) => Validators.requiredField(v, 'Meal Size'),
                       onInteraction: () {
                         FocusScope.of(context).unfocus();
-                        lookupProvider.fetchInitialData();
+                        lookupProvider.fetchTeacherLookups();
                       },
                       onChanged: (v) {
                         if (_blocksMealSizeChange) {

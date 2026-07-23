@@ -12,6 +12,8 @@ import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/core/providers/subscription_provider.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
+import 'package:meal_app/core/providers/payment_provider.dart';
+import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 /// Warms home-critical providers after login / cold start (minimal API set).
 class OfflineCacheBootstrap {
@@ -64,6 +66,8 @@ class OfflineCacheBootstrap {
       context.read<HomepageProvider>().clearState();
       context.read<BulkOrderProvider>().clearState();
       context.read<QuickServiceProvider>().clearState();
+      context.read<PaymentProvider>().clearState();
+      context.read<LookupProvider>().clearState();
     } catch (_) {
       // Best effort memory clearing
     }

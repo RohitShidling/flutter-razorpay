@@ -26,7 +26,6 @@ import 'package:meal_app/core/widgets/image_preview_dialog.dart';
 import 'package:meal_app/core/widgets/app_logo.dart';
 import 'package:meal_app/features/subscription/ui/screens/subscription_management_screen.dart';
 import 'package:meal_app/features/home/ui/widgets/bottom_footer_nav.dart';
-import 'package:meal_app/features/profile/providers/referral_provider.dart';
 import 'package:meal_app/core/navigation/app_routes.dart';
 import 'package:meal_app/core/widgets/responsive_layout.dart';
 import 'package:in_app_update/in_app_update.dart';
@@ -41,7 +40,6 @@ import 'package:meal_app/core/services/app_route_tracker.dart';
 import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
 import 'package:meal_app/core/widgets/app_skeleton.dart';
 import 'package:meal_app/core/providers/announcement_provider.dart';
-import 'package:meal_app/core/providers/notification_provider.dart';
 import 'package:meal_app/features/quick_service/ui/widgets/quick_order_section.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/core/services/app_update_service.dart';
@@ -62,8 +60,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _bootstrapHome();
       context.read<LookupProvider>().fetchContactUsInfo();
-      context.read<AnnouncementProvider>().fetchAnnouncements(location: 'home', force: true);
-      context.read<NotificationProvider>().fetchNotifications(silent: true);
+      context.read<AnnouncementProvider>().fetchAnnouncements(location: 'home', force: false);
       AppUpdateService.checkForUpdate(context);
     });
   }
@@ -97,11 +94,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         context.read<MenuProvider>().fetchTodayMenu(silent: true),
         context.read<CartProvider>().fetchCart(force: true, silent: true),
         context.read<AuthProvider>().refreshMeProfile(silent: true, forceNetwork: true),
-        context.read<ReferralProvider>().fetchRewards(),
-        context.read<QuickServiceProvider>().loadCartFromServer(),
-        context.read<BulkOrderProvider>().loadCartFromServer(),
-        context.read<QuickServiceProvider>().loadOneDayConfig(force: true),
-        context.read<QuickServiceProvider>().loadSpecialConfig(force: true),
       ]);
     } else {
       await _loadAllData(); // already calls fetchTodayMenu internally
@@ -110,8 +102,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _refreshMealDataBundle();
     if (!mounted) return;
     await _maybePromptFourMealsLeftDialog();
-    // HIGH-01: Removed the unconditional second fetchTodayMenu call here —
-    // _loadAllData() already covers it, causing 2x requests on every cold start.
   }
 
 
@@ -122,11 +112,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context.read<MenuProvider>().fetchTodayMenu(silent: true),
       context.read<CartProvider>().fetchCart(silent: true),
       context.read<AuthProvider>().refreshMeProfile(silent: true),
-      context.read<ReferralProvider>().fetchRewards(),
-      context.read<QuickServiceProvider>().loadCartFromServer(),
-      context.read<BulkOrderProvider>().loadCartFromServer(),
-      context.read<QuickServiceProvider>().loadOneDayConfig(),
-      context.read<QuickServiceProvider>().loadSpecialConfig(),
     ]);
   }
 
@@ -277,13 +262,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       forceNetwork: NetworkStatusService.instance.isOnline,
                     ),
                     context.read<AnnouncementProvider>().fetchAnnouncements(location: 'home', force: true),
-                    context.read<NotificationProvider>().fetchNotifications(silent: true),
-                    context.read<QuickServiceProvider>().loadCartFromServer(),
-                    context.read<BulkOrderProvider>().loadCartFromServer(),
                     context.read<QuickServiceProvider>().loadOneDayConfig(force: true),
                     context.read<QuickServiceProvider>().loadSpecialConfig(force: true),
-                    context.read<LookupProvider>().fetchContactUsInfo(),
-                    context.read<LookupProvider>().fetchInitialData(force: true),
                   ]);
                   if (!mounted) return;
                   await _refreshMealDataBundle(force: true);
