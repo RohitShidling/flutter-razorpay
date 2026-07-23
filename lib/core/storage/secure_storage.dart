@@ -27,12 +27,30 @@ class SecureStorage {
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     _cachedAccessToken = accessToken;
     _cachedRefreshToken = refreshToken;
-    await _storage.write(key: _accessTokenKey, value: accessToken);
-    await _storage.write(key: _refreshTokenKey, value: refreshToken);
+    try {
+      await _storage.write(key: _accessTokenKey, value: accessToken);
+      await _storage.write(key: _refreshTokenKey, value: refreshToken);
+    } catch (e) {
+      try {
+        await _storage.delete(key: _accessTokenKey);
+        await _storage.delete(key: _refreshTokenKey);
+        await _storage.write(key: _accessTokenKey, value: accessToken);
+        await _storage.write(key: _refreshTokenKey, value: refreshToken);
+      } catch (_) {
+        // Swallow exception so it doesn't block the login flow.
+      }
+    }
   }
 
   Future<void> savePhoneNumber(String phone) async {
-    await _storage.write(key: _phoneKey, value: phone);
+    try {
+      await _storage.write(key: _phoneKey, value: phone);
+    } catch (e) {
+      try {
+        await _storage.delete(key: _phoneKey);
+        await _storage.write(key: _phoneKey, value: phone);
+      } catch (_) {}
+    }
   }
 
   Future<String?> getPhoneNumber() async {
@@ -40,7 +58,14 @@ class SecureStorage {
   }
 
   Future<void> saveUsername(String username) async {
-    await _storage.write(key: _usernameKey, value: username);
+    try {
+      await _storage.write(key: _usernameKey, value: username);
+    } catch (e) {
+      try {
+        await _storage.delete(key: _usernameKey);
+        await _storage.write(key: _usernameKey, value: username);
+      } catch (_) {}
+    }
   }
 
   Future<String?> getUsername() async {
