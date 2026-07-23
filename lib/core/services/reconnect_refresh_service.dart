@@ -13,6 +13,7 @@ import 'package:meal_app/features/children/providers/children_provider.dart';
 import 'package:meal_app/features/home/providers/homepage_provider.dart';
 import 'package:meal_app/features/home/providers/menu_provider.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
+import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 
 /// Refreshes only the APIs relevant to the screen the user is currently viewing.
 class ReconnectRefreshCoordinator extends StatefulWidget {
@@ -61,6 +62,7 @@ class _ReconnectRefreshCoordinatorState extends State<ReconnectRefreshCoordinato
       final profile = context.read<ProfileProvider>();
       final payment = context.read<PaymentProvider>();
       final lookup = context.read<LookupProvider>();
+      final quick = context.read<QuickServiceProvider>();
 
       await NetworkStatusService.instance.refreshNow();
       if (!mounted) return;
@@ -80,11 +82,11 @@ class _ReconnectRefreshCoordinatorState extends State<ReconnectRefreshCoordinato
             auth.refreshMeProfile(silent: true),
             home.fetchHomepageEntries(force: true, silent: true),
             cart.fetchCart(force: true, silent: true),
-            children.fetchChildren(force: true, silent: true),
-            profile.fetchProfiles(force: true, silent: true),
             meal.fetchSubscriptionStatus(silent: true),
             meal.fetchMealStatus(silent: true),
             meal.fetchAlerts(silent: true),
+            quick.loadOneDayConfig(force: true),
+            quick.loadSpecialConfig(force: true),
           ]);
           if (meal.isSubscribed) {
             await menu.fetchTodayMenu(silent: true);
@@ -110,16 +112,24 @@ class _ReconnectRefreshCoordinatorState extends State<ReconnectRefreshCoordinato
         case AppScreen.children:
           await Future.wait([
             children.fetchChildren(force: true),
-            lookup.fetchInitialData(force: true),
+            lookup.fetchChildrenLookups(force: true),
             meal.fetchSubscriptionStatus(silent: true),
           ]);
           break;
 
         case AppScreen.teacherProfile:
+          await Future.wait([
+            profile.fetchProfiles(force: true),
+            lookup.fetchTeacherLookups(force: true),
+            meal.fetchSubscriptionStatus(silent: true),
+            cart.fetchCart(force: true, silent: true),
+          ]);
+          break;
+
         case AppScreen.professionalProfile:
           await Future.wait([
             profile.fetchProfiles(force: true),
-            lookup.fetchInitialData(force: true),
+            lookup.fetchProfessionalLookups(force: true),
             meal.fetchSubscriptionStatus(silent: true),
             cart.fetchCart(force: true, silent: true),
           ]);

@@ -83,11 +83,10 @@ class ProfileProvider with ChangeNotifier {
   }
 
   Future<void> fetchProfiles({bool force = false, bool silent = false}) async {
-    final hasAnyProfile = _teacherProfiles.isNotEmpty || _professionalProfiles.isNotEmpty;
     final isFresh = _lastFetchedAt != null &&
         DateTime.now().difference(_lastFetchedAt!).inMinutes < 10;
     // Skip if data is fresh in memory (online or offline), unless forced
-    if (!force && hasAnyProfile && isFresh) return;
+    if (!force && isFresh) return;
     if (_inflightRequest != null) return _inflightRequest;
 
     final request = _doFetch(silent: silent);

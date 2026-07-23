@@ -104,11 +104,8 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       final lookup = context.read<LookupProvider>();
       final profileProvider = context.read<ProfileProvider>();
       
-      // Fetch lookup data FIRST so dropdowns can be pre-filled
-      await lookup.fetchInitialData(force: true);
-      // Also fetch corporate locations
-      await lookup.fetchCorporateLocations();
-      await profileProvider.fetchProfiles(force: true);
+      await lookup.fetchProfessionalLookups(force: false);
+      await profileProvider.fetchProfiles(force: false);
       if (mounted) {
         await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
         if (!mounted) return;
@@ -498,7 +495,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       validator: (v) => Validators.requiredField(v, 'State'),
                       onInteraction: () {
                         FocusScope.of(context).unfocus();
-                        lookup.fetchInitialData();
+                        lookup.fetchProfessionalLookups();
                       },
                       onChanged: (v) {
                         setState(() {
@@ -557,7 +554,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       validator: (v) => Validators.requiredField(v, 'Meal Size'),
                       onInteraction: () {
                         FocusScope.of(context).unfocus();
-                        lookup.fetchInitialData();
+                        lookup.fetchProfessionalLookups();
                       },
                       onChanged: (v) {
                         if (_blocksMealSizeChange) {

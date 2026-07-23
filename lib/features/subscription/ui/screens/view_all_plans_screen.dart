@@ -19,15 +19,23 @@ class ViewAllPlansScreen extends StatefulWidget {
 class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
   late PageController _pageController;
   int _selectedSizeIndex = 0;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedSizeIndex);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false);
-      context.read<LookupProvider>().fetchInitialData(force: true);
+      await Future.wait([
+        context.read<SubscriptionProvider>().fetchSubscriptions(force: false, silent: false),
+        context.read<LookupProvider>().fetchMealSizesOnly(force: false),
+      ]);
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     });
   }
 
@@ -122,8 +130,8 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
                     ),
                   ),
                 Expanded(
-                  child: plans.isEmpty
-                      ? (subProvider.isLoading
+                  child: (plans.isEmpty || !_isInitialized)
+                      ? ((!_isInitialized || subProvider.isLoading)
                           ? const Center(child: CupertinoActivityIndicator())
                           : SingleChildScrollView(
                               physics: const AlwaysScrollableScrollPhysics(),
@@ -145,8 +153,8 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
                           ? RefreshIndicator(
                               onRefresh: () async {
                                 await Future.wait([
-                                  context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false),
-                                  context.read<LookupProvider>().fetchInitialData(force: true),
+                                   context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false),
+                                   context.read<LookupProvider>().fetchMealSizesOnly(force: true),
                                 ]);
                               },
                               child: SingleChildScrollView(
@@ -173,8 +181,8 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
                                 return RefreshIndicator(
                                   onRefresh: () async {
                                     await Future.wait([
-                                      context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false),
-                                      context.read<LookupProvider>().fetchInitialData(force: true),
+                                       context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false),
+                                       context.read<LookupProvider>().fetchMealSizesOnly(force: true),
                                     ]);
                                   },
                                   child: SingleChildScrollView(

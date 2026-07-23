@@ -32,10 +32,6 @@ class MealProvider with ChangeNotifier {
   Map<String, dynamic>? _todayMenu;
   Map<String, dynamic>? get todayMenu => _todayMenu;
 
-  // Weekly menu
-  List<dynamic> _weeklyMenu = [];
-  List<dynamic> get weeklyMenu => _weeklyMenu;
-
   // Subscription summaries from meal APIs
   List<dynamic> _subscriptionSummary = [];
   List<dynamic> get subscriptionSummary => _subscriptionSummary;
@@ -176,35 +172,7 @@ class MealProvider with ChangeNotifier {
     }
   }
 
-  // ─── Weekly Menu ──────────────────────────────────────────────────────────
 
-  Future<void> fetchWeeklyMenu({bool silent = false}) async {
-    if (!silent) {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-    }
-
-    try {
-      final data = await _repository.fetchWeeklyMenu();
-      _isSubscribed = data['is_subscribed'] ?? false;
-      if (_isSubscribed) {
-        _weeklyMenu = data['menu'] ?? [];
-        _subscriptionSummary = data['subscription_summary'] ?? [];
-      }
-    } catch (e) {
-      if (e.toString().contains('403')) {
-        _isSubscribed = false;
-      } else if (!silent || _weeklyMenu.isEmpty) {
-        _error = ErrorHandler.getErrorMessage(e);
-      }
-    } finally {
-      if (!silent) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
-  }
 
   // ─── Meal Remaining Status ────────────────────────────────────────────────
 
@@ -234,6 +202,13 @@ class MealProvider with ChangeNotifier {
     }
   }
 
+  void invalidateSchedulingCaches() {
+    _lastSkipsFetchedAt = null;
+    _lastMealStatusFetchedAt = null;
+    _lastSubStatusFetchedAt = null;
+    _lastAlertsFetchedAt = null;
+  }
+
   // ─── Skip Management ─────────────────────────────────────────────────────
 
   Future<bool> skipMeal({
@@ -253,7 +228,12 @@ class MealProvider with ChangeNotifier {
         startDate: startDate,
         endDate: endDate,
       );
-      await fetchSkips(force: true); // always refresh after mutation
+      invalidateSchedulingCaches();
+      await Future.wait([
+        fetchSkips(force: true),
+        fetchMealStatus(silent: true, force: true),
+        fetchSubscriptionStatus(silent: true, force: true),
+      ]);
       return true;
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
@@ -267,7 +247,7 @@ class MealProvider with ChangeNotifier {
   Future<void> fetchSkips({bool force = false}) async {
     // Skip the network call if data is fresh and caller is not forcing a refresh.
     // Mutations (skipMeal, cancelSkip, deleteSkip) always pass force:true.
-    if (!force && _skips.isNotEmpty && _isSkipsFresh()) return;
+    if (!force && _isSkipsFresh()) return;
 
     final cached = await _cache.loadJson(_skipHistoryCacheKey);
     if (cached != null && _skips.isEmpty) {
@@ -311,7 +291,14 @@ class MealProvider with ChangeNotifier {
   Future<bool> cancelSkip(int skipId) async {
     try {
       final success = await _repository.cancelSkip(skipId);
-      if (success) await fetchSkips(force: true);
+      if (success) {
+        invalidateSchedulingCaches();
+        await Future.wait([
+          fetchSkips(force: true),
+          fetchMealStatus(silent: true, force: true),
+          fetchSubscriptionStatus(silent: true, force: true),
+        ]);
+      }
       return success;
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
@@ -322,7 +309,14 @@ class MealProvider with ChangeNotifier {
   Future<bool> deleteSkip(int skipId) async {
     try {
       final success = await _repository.deleteSkip(skipId);
-      if (success) await fetchSkips(force: true);
+      if (success) {
+        invalidateSchedulingCaches();
+        await Future.wait([
+          fetchSkips(force: true),
+          fetchMealStatus(silent: true, force: true),
+          fetchSubscriptionStatus(silent: true, force: true),
+        ]);
+      }
       return success;
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
@@ -387,6 +381,8 @@ class MealProvider with ChangeNotifier {
         entityId: entityId,
         startDate: startDate,
       );
+      invalidateSchedulingCaches();
+      await fetchSubscriptionStatus(silent: true, force: true);
       return true;
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
@@ -405,7 +401,6 @@ class MealProvider with ChangeNotifier {
   void clearState() {
     _isSubscribed = false;
     _todayMenu = null;
-    _weeklyMenu = [];
     _subscriptionSummary = [];
     _mealStatus = [];
     _skips = [];

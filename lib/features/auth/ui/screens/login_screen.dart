@@ -12,6 +12,7 @@ import 'package:meal_app/features/auth/providers/auth_provider.dart';
 import 'package:meal_app/features/auth/ui/screens/otp_screen.dart';
 import 'package:meal_app/features/profile/ui/screens/legal_screen.dart';
 import 'package:meal_app/core/providers/lookup_provider.dart';
+import 'package:meal_app/core/services/firebase_messaging_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,18 +34,19 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _showReferralField = false;
 
   late PageController _pageController;
-  int _currentPage = 0;
+  int _currentPage = 1200;
   Timer? _carouselTimer;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: 0);
+    _pageController = PageController(initialPage: 1200);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<AuthProvider>().clearTransientState();
       context.read<LookupProvider>().fetchLoginCarousel();
       context.read<LookupProvider>().fetchReferralSettings();
+      unawaited(FirebaseMessagingService().requestNotificationPermissions());
     });
     _phoneFocusNode.addListener(_onFocusChanged);
     _usernameFocusNode.addListener(_onFocusChanged);
@@ -59,19 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
     _carouselTimer?.cancel();
     _carouselTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (!mounted) return;
-      final lookupProvider = context.read<LookupProvider>();
-      final images = lookupProvider.loginCarouselImages;
-      final pageCount = images.isNotEmpty ? images.length : 3;
-
-      if (_currentPage < pageCount - 1) {
-        _currentPage++;
-      } else {
-        _currentPage = 0;
-      }
 
       if (_pageController.hasClients) {
+        final nextPage = _pageController.page!.round() + 1;
         _pageController.animateToPage(
-          _currentPage,
+          nextPage,
           duration: const Duration(milliseconds: 600),
           curve: Curves.easeInOut,
         );
@@ -101,23 +95,28 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {});
     }
 
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final statusBarHeight = MediaQuery.paddingOf(context).top;
-    final bannerHeight = screenHeight * 0.42;
-
-    // Align card top perfectly 16px below the "Welcome to Buuttii" branding row
-    // Logo bottom is at statusBarHeight + 16 (top padding) + 38 (logo height) = statusBarHeight + 54.
-    // Target position for card top is statusBarHeight + 54 + 16 (margin) = statusBarHeight + 70.
-    // The card starts at bannerHeight - 24.
-    // Therefore target offset = (bannerHeight - 24) - (statusBarHeight + 70) = bannerHeight - statusBarHeight - 94.
-    final targetScrollOffset = (bannerHeight - statusBarHeight - 94.0).clamp(0.0, double.infinity);
-
     if (hasFocus) {
       // Scroll immediately after layout pass has rebuilt with the bottom spacer
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_scrollController.hasClients) return;
+        final authProvider = context.read<AuthProvider>();
+        final isRegister = authProvider.authMode == AuthMode.register;
+
+        double offsetMultiplier = 0.0;
+        if (_phoneFocusNode.hasFocus) {
+          offsetMultiplier = isRegister ? 80.0 : 0.0;
+        } else if (_referralFocusNode.hasFocus) {
+          offsetMultiplier = 160.0;
+        }
+        
+        final screenHeight = MediaQuery.sizeOf(context).height;
+        final statusBarHeight = MediaQuery.paddingOf(context).top;
+        final bannerHeight = screenHeight * 0.42;
+        final baseOffset = (bannerHeight - statusBarHeight - 94.0).clamp(0.0, double.infinity);
+        final targetOffset = isRegister ? (baseOffset + offsetMultiplier) : 0.0;
+        
         _scrollController.animateTo(
-          targetScrollOffset,
+          targetOffset,
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutCubic,
         );
@@ -220,6 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _setMode(AuthMode mode) {
+    final currentPhone = _phoneController.text;
     context.read<AuthProvider>().setAuthMode(mode);
     setState(() {
       _consentAccepted = false;
@@ -227,6 +227,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     _referralController.clear();
     _formKey.currentState?.reset();
+    if (currentPhone.trim().length == 10) {
+      _phoneController.text = currentPhone;
+    }
   }
 
   @override
@@ -275,10 +278,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       });
                       _startCarouselTimer();
                     },
-                    itemCount: carouselImages.isNotEmpty ? carouselImages.length : 5,
+                    itemCount: 10000,
                     itemBuilder: (context, index) {
+                      final pageCount = carouselImages.isNotEmpty ? carouselImages.length : 5;
+                      final realIndex = index % pageCount;
                       if (carouselImages.isNotEmpty) {
-                        final img = carouselImages[index];
+                        final img = carouselImages[realIndex];
                         return Image.network(
                           img.imageUrl,
                           fit: BoxFit.cover,
@@ -313,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         );
                       }
-                      return _buildCarouselPlaceholder(index);
+                      return _buildCarouselPlaceholder(realIndex);
                     },
                   ),
                   if (carouselImages.isNotEmpty)
@@ -362,16 +367,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(
                         carouselImages.isNotEmpty ? carouselImages.length : 5,
-                        (index) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          height: 8,
-                          width: _currentPage == index ? 22 : 8,
-                          decoration: BoxDecoration(
-                            color: _currentPage == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
+                        (index) {
+                          final pageCount = carouselImages.isNotEmpty ? carouselImages.length : 5;
+                          final currentRelativePage = _currentPage % pageCount;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            height: 8,
+                            width: currentRelativePage == index ? 22 : 8,
+                            decoration: BoxDecoration(
+                              color: currentRelativePage == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -390,8 +399,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Transparent top spacer (banner height minus the 24px overlap)
-                      SizedBox(height: bannerHeight - 24),
+                      // Transparent top spacer (banner height minus the 24px overlap) with manual gesture forwarding
+                      GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onHorizontalDragUpdate: (details) {
+                          if (_pageController.hasClients) {
+                            _pageController.position.jumpTo(
+                              _pageController.position.pixels - details.delta.dx,
+                            );
+                          }
+                        },
+                        onHorizontalDragEnd: (details) {
+                          if (_pageController.hasClients) {
+                            final double pageVal = _pageController.offset / _pageController.position.viewportDimension;
+                            int targetPage;
+                            if (details.primaryVelocity != null && details.primaryVelocity!.abs() > 300) {
+                              targetPage = details.primaryVelocity! < 0 ? pageVal.ceil() : pageVal.floor();
+                            } else {
+                              targetPage = pageVal.round();
+                            }
+                            _pageController.animateToPage(
+                              targetPage,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                            );
+                          }
+                        },
+                        child: SizedBox(height: bannerHeight - 24),
+                      ),
 
                       // Bottom Card – Uses stable ConstrainedBox with stable minHeight
                       ConstrainedBox(
@@ -461,10 +496,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   return null;
                                 },
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                             ],
                             _buildPhoneInput(),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
 
                             // Referral Section (Register Mode)
                             if (isRegisterMode && lookupProvider.isReferralActive) ...[
@@ -508,7 +543,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                                 ),
                               ],
-                              const SizedBox(height: 16),
+                               const SizedBox(height: 12),
                             ],
 
                             // Terms and Conditions checkbox
@@ -584,7 +619,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 18),
+                               const SizedBox(height: 12),
                             ],
 
                             // Submit Action Button

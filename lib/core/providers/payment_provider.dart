@@ -68,10 +68,28 @@ class PaymentProvider with ChangeNotifier {
   List<dynamic> _walletTransactions = [];
   List<dynamic> get walletTransactions => _walletTransactions;
 
+  DateTime? _lastHistoryFetchedAt;
+  DateTime? _lastActiveSubFetchedAt;
+  DateTime? _lastWalletFetchedAt;
+
+  bool _isHistoryFresh() =>
+      _lastHistoryFetchedAt != null &&
+      DateTime.now().difference(_lastHistoryFetchedAt!).inMinutes < 10;
+
+  bool _isActiveSubFresh() =>
+      _lastActiveSubFetchedAt != null &&
+      DateTime.now().difference(_lastActiveSubFetchedAt!).inMinutes < 5;
+
+  bool _isWalletFresh() =>
+      _lastWalletFetchedAt != null &&
+      DateTime.now().difference(_lastWalletFetchedAt!).inMinutes < 5;
+
   // ─── Payment History ───────────────────────────────────────────────────────
 
   /// Resets and re-fetches from page 1.
-  Future<void> fetchPaymentHistory({bool silent = false}) async {
+  Future<void> fetchPaymentHistory({bool silent = false, bool force = false}) async {
+    if (!force && _isHistoryFresh()) return;
+
     bool hasCachedData = false;
     final cached = await _cache.loadJson(_historyCacheKey);
     if (cached != null && _paymentHistory.isEmpty) {
@@ -94,6 +112,7 @@ class PaymentProvider with ChangeNotifier {
       _paymentHistory = (result['data'] as List?) ?? [];
       _historyTotal = (result['total'] as int?) ?? _paymentHistory.length;
       _historyPage = 1;
+      _lastHistoryFetchedAt = DateTime.now();
       await _cache.saveJson(_historyCacheKey, {
         'items': _paymentHistory,
         'total': _historyTotal,
@@ -134,6 +153,8 @@ class PaymentProvider with ChangeNotifier {
   // ─── Active Subscriptions ──────────────────────────────────────────────────
 
   Future<void> fetchActiveSubscriptions({bool silent = false, bool force = false}) async {
+    if (!force && _isActiveSubFresh()) return;
+
     bool hasCachedData = false;
     final cached = force ? null : await _cache.loadJson(_activeCacheKey);
     if (cached != null && _activeSubscriptions.isEmpty) {
@@ -152,6 +173,7 @@ class PaymentProvider with ChangeNotifier {
 
     try {
       _activeSubscriptions = await _repository.getActiveSubscriptions();
+      _lastActiveSubFetchedAt = DateTime.now();
       await _cache.saveJson(_activeCacheKey, {'items': _activeSubscriptions});
     } catch (e) {
       // Keep showing cached plans in offline mode; only show hard error if nothing cached.
@@ -202,8 +224,11 @@ class PaymentProvider with ChangeNotifier {
         entityType: entityType,
         entityId: entityId,
       );
-      await fetchWallet(silent: true);
-      await fetchPaymentHistory(silent: true);
+      _lastWalletFetchedAt = null;
+      _lastHistoryFetchedAt = null;
+      _lastActiveSubFetchedAt = null;
+      await fetchWallet(silent: true, force: true);
+      await fetchPaymentHistory(silent: true, force: true);
       await fetchActiveSubscriptions(silent: true, force: true);
       return result;
     } catch (e) {
@@ -237,8 +262,11 @@ class PaymentProvider with ChangeNotifier {
           _walletBalance = balance;
         }
       }
-      await fetchWallet(silent: true);
-      await fetchPaymentHistory(silent: true);
+      _lastWalletFetchedAt = null;
+      _lastHistoryFetchedAt = null;
+      _lastActiveSubFetchedAt = null;
+      await fetchWallet(silent: true, force: true);
+      await fetchPaymentHistory(silent: true, force: true);
       await fetchActiveSubscriptions(silent: true, force: true);
       return result;
     } catch (e) {
@@ -254,7 +282,9 @@ class PaymentProvider with ChangeNotifier {
     return _repository.previewWalletApply(total: total, useWallet: useWallet);
   }
 
-  Future<void> fetchWallet({bool silent = false}) async {
+  Future<void> fetchWallet({bool silent = false, bool force = false}) async {
+    if (!force && _walletBalance != null && _isWalletFresh()) return;
+
     if (!silent) {
       _isLoading = true;
       _error = null;
@@ -264,6 +294,7 @@ class PaymentProvider with ChangeNotifier {
     try {
       final data = await _repository.getWallet();
       _walletBalance = data['balance']?.toString();
+      _lastWalletFetchedAt = DateTime.now();
     } catch (e) {
       if (!silent) _error = ErrorHandler.getErrorMessage(e);
     } finally {
@@ -401,11 +432,14 @@ class PaymentProvider with ChangeNotifier {
     final status = result['sdkStatus'] as String? ?? 'FAILURE';
     if (status == 'SUCCESS') {
       _paymentStatus = PaymentStatus.success;
+      _lastWalletFetchedAt = null;
+      _lastHistoryFetchedAt = null;
+      _lastActiveSubFetchedAt = null;
       // MEDIUM-08: Use unawaited() to satisfy the lint rule (fire-and-forget is intentional).
       // Invalidate history cache so the next fetch shows the latest entity names.
       unawaited(_cache.saveJson(_historyCacheKey, {'items': <dynamic>[]}));
-      unawaited(fetchWallet(silent: true));
-      unawaited(fetchPaymentHistory(silent: true));
+      unawaited(fetchWallet(silent: true, force: true));
+      unawaited(fetchPaymentHistory(silent: true, force: true));
       unawaited(fetchActiveSubscriptions(silent: true, force: true));
     } else if (status == 'EXTERNAL_WALLET') {
       // User redirected to external wallet app (PhonePe/GPay). Payment may
@@ -413,7 +447,8 @@ class PaymentProvider with ChangeNotifier {
       _paymentStatus = PaymentStatus.processing;
     } else if (status == 'CANCELLED' || status == 'INTERRUPTED') {
       _paymentStatus = PaymentStatus.interrupted;
-      unawaited(fetchWallet(silent: true));
+      _lastWalletFetchedAt = null;
+      unawaited(fetchWallet(silent: true, force: true));
     } else {
       _paymentStatus = PaymentStatus.failure;
       // MEDIUM-08: No wallet fetch on payment failure — wallet balance is unchanged.
@@ -432,7 +467,8 @@ class PaymentProvider with ChangeNotifier {
         merchantTransactionId: merchantTransactionId,
         cancelPendingCart: cancelPendingCart,
       );
-      await fetchWallet(silent: true);
+      _lastWalletFetchedAt = null;
+      await fetchWallet(silent: true, force: true);
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
     }
@@ -461,6 +497,21 @@ class PaymentProvider with ChangeNotifier {
   void resetStatus() {
     _paymentStatus = PaymentStatus.none;
     _error = null;
+    notifyListeners();
+  }
+
+  void clearState() {
+    _paymentHistory = [];
+    _activeSubscriptions = [];
+    _walletBalance = null;
+    _walletTransactions = [];
+    _lastHistoryFetchedAt = null;
+    _lastActiveSubFetchedAt = null;
+    _lastWalletFetchedAt = null;
+    _isLoading = false;
+    _error = null;
+    _paymentStatus = PaymentStatus.none;
+    _lastTxnId = null;
     notifyListeners();
   }
 }

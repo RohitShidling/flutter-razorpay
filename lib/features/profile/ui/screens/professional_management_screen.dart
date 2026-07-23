@@ -36,19 +36,26 @@ class ProfessionalManagementScreen extends StatefulWidget {
 }
 
 class _ProfessionalManagementScreenState extends State<ProfessionalManagementScreen> {
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
     AppRouteTracker.instance.setCurrent(AppScreen.professionalProfile);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final lookup = context.read<LookupProvider>();
-      lookup.fetchInitialData(force: true);
-      lookup.fetchCorporateLocations();
-      context.read<ProfileProvider>().fetchProfiles(force: true).then((_) {
-        _triggerRenewIfRequested();
-      });
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
+      await Future.wait([
+        lookup.fetchProfessionalLookups(force: false),
+        context.read<ProfileProvider>().fetchProfiles(force: false),
+      ]);
+      _triggerRenewIfRequested();
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     });
   }
 
@@ -134,11 +141,10 @@ class _ProfessionalManagementScreenState extends State<ProfessionalManagementScr
                       final lookup = context.read<LookupProvider>();
                       await Future.wait([
                         profileProvider.fetchProfiles(force: true),
-                        lookup.fetchInitialData(force: true),
-                        lookup.fetchCorporateLocations(),
+                        lookup.fetchProfessionalLookups(force: true),
                       ]);
                     },
-                    child: profileProvider.isLoading && profiles.isEmpty
+                    child: (!_isInitialized || (profileProvider.isLoading && profiles.isEmpty))
                         ? const Center(child: CircularProgressIndicator())
                         : ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -475,8 +481,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final lookup = context.read<LookupProvider>();
-        await lookup.fetchInitialData();
-        await lookup.fetchCorporateLocations();
+        await lookup.fetchProfessionalLookups();
         if (mounted) {
           await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
         }
@@ -839,7 +844,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
                     validator: (v) => Validators.requiredField(v, 'State'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
-                      lookup.fetchInitialData();
+                      lookup.fetchProfessionalLookups();
                     },
                     onChanged: (v) {
                       setState(() {
@@ -898,7 +903,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
                     validator: (v) => Validators.requiredField(v, 'Meal Size'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
-                      lookup.fetchInitialData();
+                      lookup.fetchProfessionalLookups();
                     },
                     onChanged: (v) {
                       if (_blocksMealSizeChange) {

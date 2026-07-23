@@ -53,8 +53,6 @@ class NotificationProvider with ChangeNotifier {
     final unreadIds = _notifications.where((n) => !n.isRead).map((n) => n.id).toList();
     if (unreadIds.isEmpty) return;
 
-    for (final id in unreadIds) {
-      await markRead(id);
-    }
+    await Future.wait(unreadIds.map((id) => markRead(id)));
   }
 }

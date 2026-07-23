@@ -80,6 +80,7 @@ class LookupProvider with ChangeNotifier {
   List<Map<String, dynamic>> _subscriptions = [];
   List<StateModel> _states = [];
   List<CityModel> _cities = [];
+  final Map<int, List<CityModel>> _citiesCache = {};
   List<CompanyModel> _companies = [];
   List<AllowedAddressModel> _allowedAddresses = [];
   ContactUsModel? _contactUsInfo;
@@ -115,12 +116,7 @@ class LookupProvider with ChangeNotifier {
       return;
     }
     final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 60;
-    final canUseFreshOnly =
-        !force &&
-        _schools.isNotEmpty &&
-        _standards.isNotEmpty &&
-        isFresh;
-    if (canUseFreshOnly) return;
+    if (!force && isFresh) return;
     if (_inflightInitialRequest != null) return _inflightInitialRequest;
     if (_isLoading) return;
 
@@ -169,11 +165,101 @@ class LookupProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchMealSizesOnly({bool force = false}) async {
+    if (!force && _mealSizes.isNotEmpty) return;
+    try {
+      _mealSizes = await _repository.getMealSizes();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> fetchChildrenLookups({bool force = false}) async {
+    if (!NetworkStatusService.instance.isOnline) {
+      if (_schools.isNotEmpty && _standards.isNotEmpty && _mealSizes.isNotEmpty) return;
+      await _loadFromCache();
+      return;
+    }
+    final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 60;
+    if (!force && isFresh) return;
+
+    try {
+      final results = await Future.wait([
+        _repository.getSchools(),
+        _repository.getStandards(),
+        _repository.getMealSizes(),
+      ]);
+      _schools = results[0] as List<SchoolModel>;
+      _standards = results[1] as List<StandardModel>;
+      _mealSizes = results[2] as List<MealSizeModel>;
+      notifyListeners();
+      await _persistCache();
+    } catch (_) {}
+  }
+
+  Future<void> fetchTeacherLookups({bool force = false}) async {
+    if (!NetworkStatusService.instance.isOnline) {
+      if (_schools.isNotEmpty && _standards.isNotEmpty && _states.isNotEmpty && _divisions.isNotEmpty) return;
+      await _loadFromCache();
+      return;
+    }
+    final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 60;
+    if (!force && isFresh) return;
+
+    try {
+      final results = await Future.wait([
+        _repository.getSchools(),
+        _repository.getStandards(),
+        _repository.getStates(),
+        _repository.getDivisions(),
+      ]);
+      _schools = results[0] as List<SchoolModel>;
+      _standards = results[1] as List<StandardModel>;
+      _states = results[2] as List<StateModel>;
+      _divisions = results[3] as List<DivisionModel>;
+      notifyListeners();
+      await _persistCache();
+    } catch (_) {}
+  }
+
+  Future<void> fetchProfessionalLookups({bool force = false}) async {
+    if (!NetworkStatusService.instance.isOnline) {
+      if (_corporateLocations.isNotEmpty && _states.isNotEmpty && _divisions.isNotEmpty && _deliveryTimeSettings != null) return;
+      await _loadFromCache();
+      return;
+    }
+    final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 60;
+    if (!force && isFresh) return;
+
+    try {
+      final results = await Future.wait([
+        _repository.getCorporateLocations(),
+        _repository.getStates(),
+        _repository.getDivisions(),
+        _repository.getDeliveryTimeSettings(),
+      ]);
+      _corporateLocations = results[0] as List<CorporateLocationModel>;
+      _states = results[1] as List<StateModel>;
+      _divisions = results[2] as List<DivisionModel>;
+      _deliveryTimeSettings = results[3] as DeliveryTimeSettingsModel?;
+      notifyListeners();
+      await _persistCache();
+    } catch (_) {}
+  }
+
   Future<void> fetchCitiesByState(int stateId) async {
+    if (_citiesCache.containsKey(stateId)) {
+      _cities = _citiesCache[stateId]!;
+      _companies = [];
+      _allowedAddresses = [];
+      notifyListeners();
+      return;
+    }
+
     _isLoading = true;
     notifyListeners();
     try {
       _cities = await _repository.getCities(stateId: stateId);
+      _citiesCache[stateId] = _cities;
       _companies = []; // Reset companies when state/city changes
       _allowedAddresses = []; // Reset allowed addresses when state changes
     } finally {
@@ -222,7 +308,8 @@ class LookupProvider with ChangeNotifier {
     }
   }
 
-  Future<ContactUsModel?> fetchContactUsInfo() async {
+  Future<ContactUsModel?> fetchContactUsInfo({bool force = false}) async {
+    if (!force && _contactUsInfo != null) return _contactUsInfo;
     final info = await _repository.getContactUsInfo();
     _contactUsInfo = info;
     notifyListeners();
@@ -230,7 +317,7 @@ class LookupProvider with ChangeNotifier {
   }
 
   Future<DeliveryTimeSettingsModel?> fetchDeliveryTimeSettings({bool force = false}) async {
-    if (!force && _deliveryTimeSettings != null && !NetworkStatusService.instance.isOnline) {
+    if (!force && _deliveryTimeSettings != null) {
       return _deliveryTimeSettings;
     }
     final info = await _repository.getDeliveryTimeSettings();
@@ -240,7 +327,8 @@ class LookupProvider with ChangeNotifier {
     return info;
   }
 
-  Future<void> fetchLoginCarousel() async {
+  Future<void> fetchLoginCarousel({bool force = false}) async {
+    if (!force && _loginCarouselImages.isNotEmpty) return;
     try {
       _loginCarouselImages = await _repository.getLoginCarouselImages();
       notifyListeners();
@@ -257,5 +345,11 @@ class LookupProvider with ChangeNotifier {
     } catch (_) {
       // ignore errors, keep default true
     }
+  }
+
+  void clearState() {
+    _lastFetchedAt = null;
+    _citiesCache.clear();
+    notifyListeners();
   }
 }

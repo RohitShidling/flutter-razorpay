@@ -260,6 +260,8 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     // HIGH-03: Removed duplicate MealProvider.fetchTodayMenu — MenuProvider.fetchTodayMenu
     // covers the same endpoint. Also removed from the parallel batch to avoid a thundering
     // herd; MenuProvider fetch runs after the main batch settles.
+    final purchasedEntityType = (_statusData?['entityType']?.toString() ?? '').toLowerCase();
+
     try {
       final futures = <Future<void>>[
         meal.fetchSubscriptionStatus(force: true),
@@ -268,8 +270,10 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         payment.fetchActiveSubscriptions(),
         payment.fetchPaymentHistory(),
         subscriptions.fetchSubscriptions(force: true),
-        profile.fetchProfiles(force: true),
-        children.fetchChildren(force: true),
+        if (purchasedEntityType == 'child' || purchasedEntityType == 'cart' || purchasedEntityType.isEmpty)
+          children.fetchChildren(force: true),
+        if (purchasedEntityType == 'teacher' || purchasedEntityType == 'professional' || purchasedEntityType == 'cart' || purchasedEntityType.isEmpty)
+          profile.fetchProfiles(force: true),
       ];
       await Future.wait(futures);
       if (mounted) {
