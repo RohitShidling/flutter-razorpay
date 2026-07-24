@@ -46,7 +46,7 @@ class _WalletScreenState extends State<WalletScreen> {
         child: RefreshIndicator(
           onRefresh: () async {
             await Future.wait([
-              pay.fetchWallet(),
+              pay.fetchWallet(force: true),
               pay.fetchWalletTransactions(),
             ]);
           },

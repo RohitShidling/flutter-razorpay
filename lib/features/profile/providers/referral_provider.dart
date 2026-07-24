@@ -162,4 +162,17 @@ class ReferralProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  void clearState() {
+    _rewards = [];
+    _isLoading = false;
+    _errorMessage = null;
+    _lastSeenTime = null;
+    _lastRewardsFetchedAt = null;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove('referral_rewards_last_seen');
+    }).catchError((_) {});
+    notifyListeners();
+  }
 }
+

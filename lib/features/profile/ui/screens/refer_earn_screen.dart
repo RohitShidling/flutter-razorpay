@@ -13,6 +13,7 @@ import 'package:meal_app/core/utils/subscription_status_normalize.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/profile/providers/referral_provider.dart';
 import 'package:meal_app/core/models/referral_model.dart';
+import 'package:meal_app/core/services/network_status_service.dart';
 
 class CandidateProfile {
   final String id;
@@ -60,8 +61,11 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
   Future<void> _refreshAllData({bool silent = true}) async {
     try {
       await Future.wait([
-        context.read<ReferralProvider>().fetchRewards(),
-        context.read<AuthProvider>().refreshMeProfile(silent: silent),
+        context.read<ReferralProvider>().fetchRewards(force: true),
+        context.read<AuthProvider>().refreshMeProfile(
+              silent: silent,
+              forceNetwork: NetworkStatusService.instance.isOnline,
+            ),
       ]);
     } catch (_) {}
   }

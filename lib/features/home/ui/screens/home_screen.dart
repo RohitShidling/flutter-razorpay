@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ]);
   }
 
-  static const _prefFourMealsDialogDay = 'four_meals_left_dialog_shown_ymd';
+  static const _prefFourMealsDialogDay = 'cache_four_meals_left_dialog_shown_ymd';
 
   /// In-app renewal nudge when any active line has exactly four meals left (once per session day).
   Future<void> _maybePromptFourMealsLeftDialog() async {

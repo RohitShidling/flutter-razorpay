@@ -133,7 +133,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
 
       await Future.wait([
         pay.fetchActiveSubscriptions(force: true),
-        pay.fetchPaymentHistory(),
+        pay.fetchPaymentHistory(force: true),
       ]);
 
       if (!mounted) return;
