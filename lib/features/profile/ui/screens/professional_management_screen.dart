@@ -43,13 +43,9 @@ class _ProfessionalManagementScreenState extends State<ProfessionalManagementScr
     super.initState();
     AppRouteTracker.instance.setCurrent(AppScreen.professionalProfile);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final lookup = context.read<LookupProvider>();
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
-      await Future.wait([
-        lookup.fetchProfessionalLookups(force: false),
-        context.read<ProfileProvider>().fetchProfiles(force: false),
-      ]);
+      await context.read<ProfileProvider>().fetchProfiles(force: false);
       _triggerRenewIfRequested();
       if (mounted) {
         setState(() {
@@ -138,11 +134,7 @@ class _ProfessionalManagementScreenState extends State<ProfessionalManagementScr
                 child: CartOverlayBody(
                   child: RefreshIndicator(
                     onRefresh: () async {
-                      final lookup = context.read<LookupProvider>();
-                      await Future.wait([
-                        profileProvider.fetchProfiles(force: true),
-                        lookup.fetchProfessionalLookups(force: true),
-                      ]);
+                      await profileProvider.fetchProfiles(force: true);
                     },
                     child: (!_isInitialized || (profileProvider.isLoading && profiles.isEmpty))
                         ? const Center(child: CircularProgressIndicator())

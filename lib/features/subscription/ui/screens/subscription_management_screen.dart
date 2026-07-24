@@ -381,7 +381,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     }
 
     return RefreshIndicator(
-      onRefresh: () => provider.fetchPaymentHistory(),
+      onRefresh: () => provider.fetchPaymentHistory(force: true),
       child: ResponsiveContainer(
         child: ListView.builder(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),

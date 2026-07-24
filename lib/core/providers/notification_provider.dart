@@ -55,4 +55,11 @@ class NotificationProvider with ChangeNotifier {
 
     await Future.wait(unreadIds.map((id) => markRead(id)));
   }
+
+  void clearState() {
+    _notifications = [];
+    _isLoading = false;
+    notifyListeners();
+  }
 }
+

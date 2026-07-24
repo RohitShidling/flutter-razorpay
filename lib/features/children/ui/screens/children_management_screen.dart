@@ -45,10 +45,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
-      await Future.wait([
-        context.read<LookupProvider>().fetchChildrenLookups(force: false),
-        context.read<ChildrenProvider>().fetchChildren(force: false),
-      ]);
+      await context.read<ChildrenProvider>().fetchChildren(force: false);
       _triggerRenewIfRequested();
       if (mounted) {
         setState(() {
@@ -138,10 +135,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
               child: CartOverlayBody(
                 child: RefreshIndicator(
                   onRefresh: () async {
-                    await Future.wait([
-                      childrenProvider.fetchChildren(force: true),
-                      context.read<LookupProvider>().fetchChildrenLookups(force: true),
-                    ]);
+                    await childrenProvider.fetchChildren(force: true);
                   },
                   child: (!_isInitialized || (childrenProvider.isLoading && children.isEmpty))
                       ? const Center(child: CircularProgressIndicator())

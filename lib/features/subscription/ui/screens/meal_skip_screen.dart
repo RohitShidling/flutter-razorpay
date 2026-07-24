@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
+import 'package:meal_app/core/utils/meal_date.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/features/children/providers/children_provider.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
@@ -57,7 +58,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
   // HIGH-04: Guard against concurrent fetch runs triggered by rapid reconnects.
   bool _fetchInFlight = false;
 
-  void _fetchAll() {
+  void _fetchAll({bool force = false}) {
     if (!mounted || _fetchInFlight) return;
     _fetchInFlight = true;
     final mealProvider = context.read<MealProvider>();
@@ -66,11 +67,11 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     Future(() async {
       try {
         await Future.wait([
-          mealProvider.fetchSkips(),
-          mealProvider.fetchMealStatus(),
-          mealProvider.fetchSkipPolicy(),
-          childrenProvider.fetchChildren(),
-          profileProvider.fetchProfiles(),
+          mealProvider.fetchSkips(force: force),
+          mealProvider.fetchMealStatus(force: force),
+          mealProvider.fetchSkipPolicy(force: force),
+          childrenProvider.fetchChildren(force: force),
+          profileProvider.fetchProfiles(force: force),
         ]);
       } finally {
         _fetchInFlight = false;
@@ -158,7 +159,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                   child: showSpinner
                       ? const Center(child: CupertinoActivityIndicator())
                       : RefreshIndicator(
-                          onRefresh: () async => _fetchAll(),
+                          onRefresh: () async => _fetchAll(force: true),
                           color: AppTheme.primaryColor,
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -906,6 +907,76 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
       return match['include_saturday'] != false;
     }
 
+    String? validateEntitySkipStatus(String entityType, String entityId) {
+      final nowYmd = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      
+      final activeSkips = mealProvider.skips.where((skip) {
+        final type = skip['entity_type']?.toString().toLowerCase();
+        final id = skip['entity_id']?.toString();
+        final status = skip['status']?.toString().toLowerCase();
+        final endStr = skip['skip_end_date']?.toString();
+        
+        return type == entityType.toLowerCase() &&
+            id == entityId &&
+            status == 'approved' &&
+            endStr != null &&
+            endStr.compareTo(nowYmd) >= 0;
+      }).toList();
+      
+      if (activeSkips.isEmpty) return null;
+      if (activeSkips.length > 1) {
+        return 'You already have multiple active/scheduled skips. You must cancel them first.';
+      }
+      
+      final existing = activeSkips.first;
+      final startStr = existing['skip_start_date']?.toString() ?? '';
+      final endStr = existing['skip_end_date']?.toString() ?? '';
+      final isCurrentlyActive = startStr.compareTo(nowYmd) <= 0;
+      
+      if (isCurrentlyActive) {
+        return null;
+      } else {
+        return 'Scheduled skip found from ${MealDate.formatDisplay(startStr)} to ${MealDate.formatDisplay(endStr)}. Cancel it first.';
+      }
+    }
+
+    DateTime resolveEntityFirstSelectableDate(String entityKey, int minNoticeDays) {
+      final parsed = parseMealSkipEntityKey(entityKey);
+      final tomorrow = DateTime.now().add(Duration(days: minNoticeDays));
+      if (parsed == null) return tomorrow;
+      
+      final nowYmd = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final activeSkips = mealProvider.skips.where((skip) {
+        final type = skip['entity_type']?.toString().toLowerCase();
+        final id = skip['entity_id']?.toString();
+        final status = skip['status']?.toString().toLowerCase();
+        final endStr = skip['skip_end_date']?.toString();
+        
+        return type == parsed.type.toLowerCase() &&
+            id == parsed.id &&
+            status == 'approved' &&
+            endStr != null &&
+            endStr.compareTo(nowYmd) >= 0;
+      }).toList();
+      
+      if (activeSkips.isEmpty) return tomorrow;
+      
+      DateTime latestEnd = tomorrow;
+      for (final skip in activeSkips) {
+        final endStr = skip['skip_end_date']?.toString();
+        if (endStr != null) {
+          final parsedEnd = DateTime.tryParse(endStr);
+          if (parsedEnd != null) {
+            final nextDay = parsedEnd.add(const Duration(days: 1));
+            if (nextDay.isAfter(latestEnd)) {
+              latestEnd = nextDay;
+            }
+          }
+        }
+      }
+      return latestEnd;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -983,7 +1054,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                           onSelected: (_) => setSheetState(() {
                             selectedEntity = key;
                             selectedRange = null;
-                            sheetError = null;
+                            sheetError = validateEntitySkipStatus(e['type']!, e['id']!);
                           }),
                           selectedColor: AppTheme.primaryColor,
                           labelStyle: TextStyle(
@@ -1077,20 +1148,76 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                                 return;
                               }
 
+                              final parsed = parseMealSkipEntityKey(selectedEntity!);
+                              if (parsed != null) {
+                                final skipStatusErr = validateEntitySkipStatus(parsed.type, parsed.id);
+                                if (skipStatusErr != null) {
+                                  setSheetState(() => sheetError = skipStatusErr);
+                                  return;
+                                }
+                              }
+
                               final tomorrow = DateTime.now().add(Duration(days: minNoticeDays));
                               final includeSat = resolveEntityIncludesSaturday(selectedEntity!);
 
-                              // lastDate = start + enough days to cover `remainingMeals` meal days
-                              // We'll allow up to 90 calendar days as a generous upper bound
-                              final lastDate = tomorrow.add(const Duration(days: 90));
+                              DateTime resolveEntityMaxAllowedDate(String entityKey) {
+                                final parsed = parseMealSkipEntityKey(entityKey);
+                                final fallbackDefault = tomorrow.add(const Duration(days: 90));
+                                if (parsed == null) return fallbackDefault;
+                                
+                                final matches = mealProvider.mealStatus.where(
+                                  (s) => s['entity_type'] == parsed.type && s['entity_id']?.toString() == parsed.id,
+                                );
+                                if (matches.isEmpty) return fallbackDefault;
+                                
+                                final match = matches.first;
+                                final startStr = match['start_date']?.toString() ?? match['startDate']?.toString();
+                                final endStr = match['end_date']?.toString() ?? match['endDate']?.toString();
+                                final remainingVal = match['remaining_meals'] ?? match['remainingMeals'] ?? 0;
+                                final remaining = int.tryParse(remainingVal.toString()) ?? 0;
+                                
+                                if (startStr == null || endStr == null) return fallbackDefault;
+                                
+                                final subStart = DateTime.tryParse(startStr);
+                                final subEnd = DateTime.tryParse(endStr);
+                                if (subStart == null || subEnd == null) return fallbackDefault;
+                                
+                                final today = DateTime.now();
+                                final baseDate = subStart.isAfter(today) ? subStart : DateTime(today.year, today.month, today.day);
+                                
+                                DateTime computeProjectedEndDate(DateTime start, int mealDays, bool includeSaturday) {
+                                  int rem = mealDays;
+                                  if (rem <= 0) return start;
+                                  var current = start;
+                                  int safety = 0;
+                                  while (rem > 0 && safety < 1000) {
+                                    safety++;
+                                    if (current.weekday != DateTime.sunday) {
+                                      if (includeSaturday || current.weekday != DateTime.saturday) {
+                                        rem--;
+                                        if (rem == 0) break;
+                                      }
+                                    }
+                                    current = current.add(const Duration(days: 1));
+                                  }
+                                  return current;
+                                }
+                                
+                                final projectedEnd = computeProjectedEndDate(baseDate, remaining, includeSat);
+                                return subEnd.isAfter(projectedEnd) ? subEnd : projectedEnd;
+                              }
+
+                              final selectableFirstDate = resolveEntityFirstSelectableDate(selectedEntity!, minNoticeDays);
+                              final maxAllowedDate = resolveEntityMaxAllowedDate(selectedEntity!);
+                              final lastDate = maxAllowedDate.isBefore(selectableFirstDate) ? selectableFirstDate : maxAllowedDate;
 
                               DateTimeRange? range;
 
                               if (skipType == 0) {
                                 final date = await showDatePicker(
                                   context: sheetCtx,
-                                  initialDate: tomorrow,
-                                  firstDate: tomorrow,
+                                  initialDate: selectableFirstDate,
+                                  firstDate: selectableFirstDate,
                                   lastDate: lastDate,
                                   helpText: 'Select skip date',
                                   builder: (context, child) {
@@ -1110,7 +1237,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                               } else {
                                 range = await showDateRangePicker(
                                   context: sheetCtx,
-                                  firstDate: tomorrow,
+                                  firstDate: selectableFirstDate,
                                   lastDate: lastDate,
                                   helpText: 'Select skip range (min $minSkipDays days)',
                                   builder: (context, child) {
@@ -1281,7 +1408,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: (selectedEntity != null && selectedRange != null && !isSubmitting)
+                        onPressed: (selectedEntity != null && selectedRange != null && sheetError == null && !isSubmitting)
                             ? () async {
                                 final parsed = parseMealSkipEntityKey(selectedEntity!);
                                 if (parsed == null) {

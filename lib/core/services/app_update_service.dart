@@ -63,12 +63,15 @@ class AppUpdateService {
         } else if (info.flexibleUpdateAllowed) {
           debugPrint('[AppUpdate] Triggering flexible update.');
           if (!context.mounted) return;
-          _startListening(context);
-          installStatusNotifier.value = InstallStatus.downloading;
           try {
             final result = await InAppUpdate.startFlexibleUpdate();
             debugPrint('[AppUpdate] Flexible update start result: $result');
-            if (result != AppUpdateResult.success) {
+            if (result == AppUpdateResult.success) {
+              if (context.mounted) {
+                _startListening(context);
+                installStatusNotifier.value = InstallStatus.downloading;
+              }
+            } else {
               _installSubscription?.cancel();
               _installSubscription = null;
               installStatusNotifier.value = null;

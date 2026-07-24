@@ -86,10 +86,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
-      await Future.wait([
-        context.read<LookupProvider>().fetchTeacherLookups(force: false),
-        context.read<ProfileProvider>().fetchProfiles(force: false),
-      ]);
+      await context.read<ProfileProvider>().fetchProfiles(force: false);
       _triggerRenewIfRequested();
       if (mounted) {
         setState(() {
@@ -178,10 +175,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                 child: CartOverlayBody(
                   child: RefreshIndicator(
                     onRefresh: () async {
-                      await Future.wait([
-                        profileProvider.fetchProfiles(force: true),
-                        context.read<LookupProvider>().fetchTeacherLookups(force: true),
-                      ]);
+                      await profileProvider.fetchProfiles(force: true);
                     },
                     child: (!_isInitialized || (profileProvider.isLoading && profiles.isEmpty))
                         ? const Center(child: CircularProgressIndicator())

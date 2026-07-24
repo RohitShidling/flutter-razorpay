@@ -221,4 +221,13 @@ class AnnouncementProvider with ChangeNotifier {
       return timeB.compareTo(timeA);
     });
   }
+
+  void clearState() {
+    _announcements = [];
+    _isLoading = false;
+    _lastFetchedAt = null;
+    _readAnnouncementIds = {};
+    _currentUserPhone = null;
+    notifyListeners();
+  }
 }
