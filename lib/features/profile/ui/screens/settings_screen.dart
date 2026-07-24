@@ -42,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<PaymentProvider>().fetchWallet(silent: true);
+      context.read<PaymentProvider>().fetchActiveSubscriptions(silent: true);
       context.read<ReferralProvider>().fetchRewards();
       _loadAboutConfig();
     });
@@ -558,6 +559,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildDeleteAccountButton(BuildContext context, AuthProvider authProvider) {
     return ElevatedButton(
       onPressed: () {
+        final paymentProvider = Provider.of<PaymentProvider>(context, listen: false);
+        if (paymentProvider.activeSubscriptions.isNotEmpty) {
+          showCupertinoDialog(
+            context: context,
+            builder: (dialogContext) => CupertinoAlertDialog(
+              title: const Text('Cannot Delete Account'),
+              content: const Text('You cannot request account deletion because you currently have active subscription plans. Please cancel or wait for them to expire first.'),
+              actions: [
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () => Navigator.pop(dialogContext),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+
         showCupertinoDialog(
           context: context,
           builder: (dialogContext) => CupertinoAlertDialog(
