@@ -894,7 +894,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     bool isSubmitting = false;
     final minSkipDays = int.tryParse(mealProvider.skipPolicy['min_skip_days']?.toString() ?? '') ?? 3;
     final minNoticeDays = int.tryParse(mealProvider.skipPolicy['min_notice_days']?.toString() ?? '') ?? 1;
-    int skipType = minSkipDays >= 2 ? 1 : 0; // 0 for single day, 1 for multiple days
+    int skipType = 0; // 0 for single day, 1 for multiple days
 
     bool resolveEntityIncludesSaturday(String entityKey) {
       final parsed = parseMealSkipEntityKey(entityKey);
@@ -1072,61 +1072,59 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                     const SizedBox(height: 20),
 
                     // Skip Type Toggle
-                    if (minSkipDays == 1) ...[
-                      Text(
-                        'Skip Duration',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                        ),
+                    Text(
+                      'Skip Duration',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                       ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: CupertinoSlidingSegmentedControl<int>(
-                          groupValue: skipType,
-                          children: {
-                            0: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Text(
-                                'Single Day',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: skipType == 0 ? FontWeight.w700 : FontWeight.w500,
-                                  color: skipType == 0 
-                                      ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
-                                      : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
-                                ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: CupertinoSlidingSegmentedControl<int>(
+                        groupValue: skipType,
+                        children: {
+                          0: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              'Single Day',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: skipType == 0 ? FontWeight.w700 : FontWeight.w500,
+                                color: skipType == 0 
+                                    ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
+                                    : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
                               ),
                             ),
-                            1: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Text(
-                                'Multiple Days',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: skipType == 1 ? FontWeight.w700 : FontWeight.w500,
-                                  color: skipType == 1 
-                                      ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
-                                      : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
-                                ),
+                          ),
+                          1: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              'Multiple Days',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: skipType == 1 ? FontWeight.w700 : FontWeight.w500,
+                                color: skipType == 1 
+                                    ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
+                                    : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
                               ),
                             ),
-                          },
-                          onValueChanged: (val) {
-                            if (val != null) {
-                              setSheetState(() {
-                                skipType = val;
-                                selectedRange = null;
-                              });
-                            }
-                          },
-                          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade100,
-                          thumbColor: isDark ? const Color(0xFF333333) : Colors.white,
-                        ),
+                          ),
+                        },
+                        onValueChanged: (val) {
+                          if (val != null) {
+                            setSheetState(() {
+                              skipType = val;
+                              selectedRange = null;
+                            });
+                          }
+                        },
+                        backgroundColor: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade100,
+                        thumbColor: isDark ? const Color(0xFF333333) : Colors.white,
                       ),
-                      const SizedBox(height: 20),
-                    ],
+                    ),
+                    const SizedBox(height: 20),
 
                     // Date range picker
                     Text(
@@ -1255,12 +1253,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
 
                               if (range == null) return;
 
-                              final mealDays = _countSkippableMealDays(range.start, range.end, includeSat);
-                              if (skipType == 1 && mealDays < minSkipDays) {
-                                setSheetState(() => sheetError =
-                                    'Minimum $minSkipDays meal days required for multiple days skip. Selected range has only $mealDays meal day(s).');
-                                return;
-                              }
+                              // No blocking validation on minimum days anymore as any skip range is allowed.
 
                               setSheetState(() {
                                 selectedRange = range;
@@ -1365,6 +1358,57 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                                     fontWeight: FontWeight.w800,
                                     fontSize: 13,
                                   ),
+                                ),
+                                const SizedBox(height: 6),
+                                Builder(
+                                  builder: (ctx) {
+                                    final calendarDays = selectedRange!.end.difference(selectedRange!.start).inDays + 1;
+                                    final isExtended = calendarDays >= minSkipDays;
+                                    if (isExtended) {
+                                      return Row(
+                                        children: [
+                                          Icon(
+                                            CupertinoIcons.checkmark_seal_fill,
+                                            color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Expanded(
+                                            child: Text(
+                                              'Your plan will be extended by $mealDays day(s). You won\'t lose any meals!',
+                                              style: TextStyle(
+                                                color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    } else {
+                                      final mealText = mealDays == 1 ? 'this meal' : 'these meals';
+                                      return Row(
+                                        children: [
+                                          Icon(
+                                            CupertinoIcons.info_circle_fill,
+                                            color: isDark ? Colors.orangeAccent : Colors.orange.shade800,
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Expanded(
+                                            child: Text(
+                                              'You will lose $mealText. To keep your meals and extend your plan, you must skip at least $minSkipDays days.',
+                                              style: TextStyle(
+                                                color: isDark ? Colors.orangeAccent : Colors.orange.shade800,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }
+                                  },
                                 ),
                               ],
                             ),
