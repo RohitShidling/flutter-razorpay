@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
-import 'package:meal_app/features/home/providers/menu_provider.dart';
+import 'package:meal_app/core/network/dio_client.dart';
+import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_section.dart';
@@ -68,6 +69,10 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
   int? _selectedMealSizeId;
   bool _isScreenLoading = true;
 
+  /// Weekly menu fetched from the public (un-gated) endpoint.
+  /// Stored locally so we don't depend on subscription-gated MenuProvider.
+  List<dynamic> _weeklyMenuLocal = [];
+
   @override
   void initState() {
     super.initState();
@@ -84,18 +89,39 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
     try {
       final p = context.read<QuickServiceProvider>();
       final bulk = context.read<BulkOrderProvider>();
-      final menu = context.read<MenuProvider>();
+      final dio = context.read<DioClient>();
       final lookup = context.read<LookupProvider>();
 
       // Always force-refresh config — cutoff time is real-time admin data.
       // Running in parallel with the other fetches for speed.
+      //
+      // IMPORTANT: We use the PUBLIC (un-gated) menu endpoints so that
+      // users WITHOUT a subscription can still see the menu here.
+      // The subscription-gated MenuProvider is intentionally NOT used.
+      final todayFuture = dio.dio.get(ApiEndpoints.commonMenuToday).then<dynamic>((r) => r.data).catchError((_) => null);
+      final weeklyFuture = dio.dio.get(ApiEndpoints.commonMenuWeekly).then<dynamic>((r) => r.data).catchError((_) => null);
+
       await Future.wait([
         p.loadOneDayConfig(),                          // always fresh
         bulk.loadSavedDeliveryAddress(),
-        menu.fetchTodayMenu(force: true, silent: true),
-        menu.fetchWeeklyMenuSilent(),
         lookup.fetchMealSizesOnly(),
       ]);
+
+      final dynamic todayData = await todayFuture;
+      final dynamic weeklyData = await weeklyFuture;
+
+      Map<String, dynamic>? publicTodayMenu;
+      List<dynamic> publicWeeklyMenu = [];
+
+      // Parse today's menu from public endpoint
+      if (todayData is Map && todayData['success'] == true && todayData['data'] is Map) {
+        publicTodayMenu = Map<String, dynamic>.from(todayData['data'] as Map);
+      }
+
+      // Parse weekly menu from public endpoint
+      if (weeklyData is Map && weeklyData['success'] == true && weeklyData['data'] is List) {
+        publicWeeklyMenu = weeklyData['data'] as List;
+      }
 
       if (!mounted) return;
       final addr = bulk.deliveryAddress;
@@ -103,8 +129,11 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
         p.setAddress(addr);
       }
 
-      final todayMenu = menu.todayMenu;
-      p.setTodayMenu(todayMenu == null ? null : Map<String, dynamic>.from(todayMenu));
+      // Set today's menu from the public endpoint into the provider
+      p.setTodayMenu(publicTodayMenu);
+
+      // Store weekly menu locally for tomorrow lookup
+      _weeklyMenuLocal = publicWeeklyMenu;
 
       final sizes = lookup.mealSizes;
       if (_selectedMealSizeId == null && sizes.isNotEmpty) {
@@ -212,8 +241,8 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
             if (data.cfg == null) {
               return Center(child: Text(data.error ?? 'Service unavailable'));
             }
-            // Pick tomorrow's menu from weekly list
-            final weeklyMenu = context.read<MenuProvider>().weeklyMenu;
+            // Pick tomorrow's menu from weekly list (local, un-gated data)
+            final weeklyMenu = _weeklyMenuLocal;
             final tomorrowYmd = _tomorrowYmd();
             Map<String, dynamic>? tomorrowMenu;
             for (final entry in weeklyMenu) {
