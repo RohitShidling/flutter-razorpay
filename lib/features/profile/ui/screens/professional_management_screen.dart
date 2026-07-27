@@ -468,58 +468,49 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
     _timeController = TextEditingController(text: backendTime ?? '');
     _timeDisplayController = TextEditingController(text: TimeUtils.formatToDisplay(_timeController.text));
     _initialSnapshot = '';
+    _isLoading = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final lookup = context.read<LookupProvider>();
+      await lookup.fetchProfessionalLookups();
+      if (mounted) {
+        await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
+      }
 
-    if (widget.profile != null) {
-      _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final lookup = context.read<LookupProvider>();
-        await lookup.fetchProfessionalLookups();
-        if (mounted) {
-          await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
-        }
+      CorporateLocationModel? corpLoc;
+      StateModel? state;
+      CityModel? city;
+      MealSizeModel? mealSize;
 
-        CorporateLocationModel? corpLoc;
-        StateModel? state;
-        CityModel? city;
-        MealSizeModel? mealSize;
+      if (mounted && widget.profile != null) {
+        corpLoc = lookup.corporateLocations
+            .where((c) => c.name == widget.profile!.companyName || c.id == widget.profile!.corporateLocationId)
+            .firstOrNull;
+        state = lookup.states.where((s) => s.name.toLowerCase() == widget.profile!.state.toLowerCase()).firstOrNull;
+        mealSize = lookup.mealSizes.where((s) => s.id == widget.profile!.mealSizeId).firstOrNull;
 
-        if (mounted) {
-          corpLoc = lookup.corporateLocations
-              .where((c) => c.name == widget.profile!.companyName || c.id == widget.profile!.corporateLocationId)
-              .firstOrNull;
-          state = lookup.states.where((s) => s.name.toLowerCase() == widget.profile!.state.toLowerCase()).firstOrNull;
-          mealSize = lookup.mealSizes.where((s) => s.id == widget.profile!.mealSizeId).firstOrNull;
-
-          if (state != null) {
-            await lookup.fetchCitiesByState(state.id);
-            if (mounted) {
-              city = lookup.cities.where((c) => c.name.toLowerCase() == widget.profile!.city.toLowerCase()).firstOrNull;
-            }
+        if (state != null) {
+          await lookup.fetchCitiesByState(state.id);
+          if (mounted) {
+            city = lookup.cities.where((c) => c.name.toLowerCase() == widget.profile!.city.toLowerCase()).firstOrNull;
           }
         }
-
-        if (mounted) {
-          setState(() {
-            _selectedCorporateLocation = corpLoc;
-            _selectedState = state;
-            _selectedCity = city;
-            _selectedMealSize = mealSize;
-            _corporateLocksLocation = corpLoc != null;
-            _isLoading = false;
-          });
-          _captureSnapshot();
-        }
-      });
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final lookup = context.read<LookupProvider>();
+      } else if (mounted) {
         final band = MealSizeRecommendations.recommendedBandForTeacherOrProfessional();
+        mealSize = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
+      }
+
+      if (mounted) {
         setState(() {
-          _selectedMealSize = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
+          _selectedCorporateLocation = corpLoc;
+          _selectedState = state;
+          _selectedCity = city;
+          _selectedMealSize = mealSize;
+          _corporateLocksLocation = corpLoc != null;
+          _isLoading = false;
         });
         _captureSnapshot();
-      });
-    }
+      }
+    });
   }
 
   @override

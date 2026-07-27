@@ -415,7 +415,7 @@ class _PlanCatalogTile extends StatelessWidget {
                     : null,
               ),
               child: Text(
-                isTrial ? 'WEEKLY PLAN' : regularPlanName,
+                isTrial ? 'WEEKLY PLAN' : regularPlanName.toUpperCase(),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
