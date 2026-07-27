@@ -55,4 +55,32 @@ class QuickServiceRepository {
     final res = await _dioClient.dio.post(ApiEndpoints.specialDishInitiatePayment, data: body);
     return Map<String, dynamic>.from(res.data['data'] as Map);
   }
+
+  // ── Public (un-gated) menu endpoints for One Day Lunch ──────────────────
+  Future<Map<String, dynamic>?> getPublicMenuToday() async {
+    final res = await _dioClient.dio.get(ApiEndpoints.commonMenuToday);
+    final data = res.data;
+    if (data is Map && data['success'] == true && data['data'] is Map) {
+      return Map<String, dynamic>.from(data['data'] as Map);
+    }
+    return null;
+  }
+
+  Future<List<dynamic>> getPublicMenuWeekly() async {
+    final res = await _dioClient.dio.get(ApiEndpoints.commonMenuWeekly);
+    final data = res.data;
+    if (data is Map && data['success'] == true && data['data'] is List) {
+      return data['data'] as List;
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>?> getPublicMenuByDate(String date) async {
+    final res = await _dioClient.dio.get(ApiEndpoints.commonMenuByDate(date));
+    final data = res.data;
+    if (data is Map && data['success'] == true && data['data'] is Map) {
+      return Map<String, dynamic>.from(data['data'] as Map);
+    }
+    return null;
+  }
 }

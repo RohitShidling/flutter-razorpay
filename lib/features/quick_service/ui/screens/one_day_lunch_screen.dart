@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
-import 'package:meal_app/core/network/dio_client.dart';
-import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_section.dart';
@@ -89,38 +87,44 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
     try {
       final p = context.read<QuickServiceProvider>();
       final bulk = context.read<BulkOrderProvider>();
-      final dio = context.read<DioClient>();
       final lookup = context.read<LookupProvider>();
 
       // Always force-refresh config — cutoff time is real-time admin data.
-      // Running in parallel with the other fetches for speed.
       //
       // IMPORTANT: We use the PUBLIC (un-gated) menu endpoints so that
       // users WITHOUT a subscription can still see the menu here.
       // The subscription-gated MenuProvider is intentionally NOT used.
-      final todayFuture = dio.dio.get(ApiEndpoints.commonMenuToday).then<dynamic>((r) => r.data).catchError((_) => null);
-      final weeklyFuture = dio.dio.get(ApiEndpoints.commonMenuWeekly).then<dynamic>((r) => r.data).catchError((_) => null);
+      final tomorrowDate = _tomorrowYmd();
+      final todayFuture = p.fetchPublicMenuToday();
+      final weeklyFuture = p.fetchPublicMenuWeekly();
+      final tomorrowFuture = p.fetchPublicMenuByDate(tomorrowDate);
 
       await Future.wait([
-        p.loadOneDayConfig(),                          // always fresh
+        p.loadOneDayConfig(force: true),                 // always force-refresh — cutoff is real-time
         bulk.loadSavedDeliveryAddress(),
         lookup.fetchMealSizesOnly(),
+        lookup.fetchChildrenLookups(),                 // schools, standards, divisions for address form
       ]);
 
-      final dynamic todayData = await todayFuture;
-      final dynamic weeklyData = await weeklyFuture;
+      final publicTodayMenu = await todayFuture;
+      List<dynamic> publicWeeklyMenu = await weeklyFuture;
+      final publicTomorrowMenu = await tomorrowFuture;
 
-      Map<String, dynamic>? publicTodayMenu;
-      List<dynamic> publicWeeklyMenu = [];
+      debugPrint('[OneDayLunch] todayMenu=${publicTodayMenu != null ? 'loaded' : 'null'}, weeklyMenu=${publicWeeklyMenu.length} items, tomorrowMenu=${publicTomorrowMenu != null ? 'loaded' : 'null'}');
 
-      // Parse today's menu from public endpoint
-      if (todayData is Map && todayData['success'] == true && todayData['data'] is Map) {
-        publicTodayMenu = Map<String, dynamic>.from(todayData['data'] as Map);
-      }
-
-      // Parse weekly menu from public endpoint
-      if (weeklyData is Map && weeklyData['success'] == true && weeklyData['data'] is List) {
-        publicWeeklyMenu = weeklyData['data'] as List;
+      // If tomorrow's menu is missing from the weekly data, inject it from
+      // the direct date-based fetch so the "Next Day" tab is never empty
+      // when the admin has uploaded a menu for that date.
+      if (publicTomorrowMenu != null) {
+        final alreadyHasTomorrow = publicWeeklyMenu.any((e) {
+          if (e is! Map) return false;
+          final raw = e['menu_date'] ?? e['date'] ?? '';
+          final ymd = raw.toString().contains('T') ? raw.toString().split('T').first : raw.toString();
+          return ymd == tomorrowDate;
+        });
+        if (!alreadyHasTomorrow) {
+          publicWeeklyMenu = [...publicWeeklyMenu, publicTomorrowMenu];
+        }
       }
 
       if (!mounted) return;

@@ -7,6 +7,7 @@ import 'package:meal_app/features/quick_service/providers/quick_service_provider
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/quick_service/ui/screens/special_dishes_cart_screen.dart';
 import 'package:meal_app/core/widgets/responsive_layout.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 
 class SpecialDishesScreen extends StatefulWidget {
   const SpecialDishesScreen({super.key});
@@ -345,7 +346,10 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
           ],
         ),
         child: ElevatedButton(
-          onPressed: () => p.setCartQty(id, 1),
+          onPressed: () {
+            p.setCartQty(id, 1);
+            ErrorHandler.showSuccess(context, 'Item added to cart.');
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: isDark ? AppTheme.surfaceDark : Colors.white,
             foregroundColor: AppTheme.primaryColor,
@@ -428,12 +432,18 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
                 onFieldSubmitted: (val) {
                   final newQty = int.tryParse(val) ?? qty;
                   p.setCartQty(id, newQty);
+                  if (newQty > qty) {
+                    ErrorHandler.showSuccess(context, 'Item added to cart.');
+                  }
                 },
               ),
             ),
           ),
           IconButton(
-            onPressed: () => p.setCartQty(id, qty + 1),
+            onPressed: () {
+              p.setCartQty(id, qty + 1);
+              ErrorHandler.showSuccess(context, 'Item added to cart.');
+            },
             icon: const Icon(CupertinoIcons.plus, size: 14, color: Colors.white),
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             padding: EdgeInsets.zero,
