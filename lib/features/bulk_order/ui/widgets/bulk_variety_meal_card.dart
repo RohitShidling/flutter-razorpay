@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:meal_app/features/bulk_order/data/models/bulk_order_config.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 
 /// Variety meal card with quantity entry and explicit add-to-cart action.
 class BulkVarietyMealCard extends StatefulWidget {
@@ -91,6 +92,9 @@ class BulkVarietyMealCardState extends State<BulkVarietyMealCard> {
     if (ok && mounted) {
       _controller.text = _textForQty(widget.cartQuantity);
       setState(() {});
+      if (parsed > 0) {
+        ErrorHandler.showSuccess(context, 'Added to cart successfully.');
+      }
     }
   }
 

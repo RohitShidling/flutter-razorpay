@@ -1039,13 +1039,14 @@ class TodayMealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusData = context.watch<MealProvider>().subscriptionStatusData;
-    final hasActive = statusData?['has_active_subscription'] == true;
-    final hasUpcoming = statusData?['has_upcoming_subscription'] == true;
+    // final statusData = context.watch<MealProvider>().subscriptionStatusData;
+    // final hasActive = statusData?['has_active_subscription'] == true;
+    // final hasUpcoming = statusData?['has_upcoming_subscription'] == true;
 
-    if (statusData != null && !hasActive && !hasUpcoming) {
-      return const SizedBox.shrink();
-    }
+    // Show today's meal card regardless of subscription status so users can see the menu and order one day lunch.
+    // if (statusData != null && !hasActive && !hasUpcoming) {
+    //   return const SizedBox.shrink();
+    // }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final menuProvider = context.watch<MenuProvider>();

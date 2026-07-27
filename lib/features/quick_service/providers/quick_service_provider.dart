@@ -50,7 +50,7 @@ class QuickServiceProvider with ChangeNotifier {
 
   bool _isOneDayConfigFresh() =>
       _lastOneDayConfigFetchedAt != null &&
-      DateTime.now().difference(_lastOneDayConfigFetchedAt!).inHours < 6;
+      DateTime.now().difference(_lastOneDayConfigFetchedAt!).inMinutes < 2;
 
   bool _isSpecialConfigFresh() =>
       _lastSpecialConfigFetchedAt != null &&
@@ -153,7 +153,7 @@ class QuickServiceProvider with ChangeNotifier {
     try {
       _oneDayConfig = await _repository.getOneDayLunchConfig();
       _lastOneDayConfigFetchedAt = DateTime.now();
-      await CacheStore.setJson('one_day_lunch_config', _oneDayConfig, ttl: const Duration(hours: 6));
+      await CacheStore.setJson('one_day_lunch_config', _oneDayConfig, ttl: const Duration(minutes: 10));
       _error = null;
     } catch (e) {
       if (_oneDayConfig == null) {
@@ -164,6 +164,16 @@ class QuickServiceProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ── Public menu helpers (un-gated, for One Day Lunch screen) ────────────
+  Future<Map<String, dynamic>?> fetchPublicMenuToday() =>
+      _repository.getPublicMenuToday().catchError((_) => null);
+
+  Future<List<dynamic>> fetchPublicMenuWeekly() =>
+      _repository.getPublicMenuWeekly().catchError((_) => <dynamic>[]);
+
+  Future<Map<String, dynamic>?> fetchPublicMenuByDate(String date) =>
+      _repository.getPublicMenuByDate(date).catchError((_) => null);
 
   Future<void> loadSpecialConfig({bool force = false}) async {
     if (!force && _specialConfig != null && _isSpecialConfigFresh()) return;

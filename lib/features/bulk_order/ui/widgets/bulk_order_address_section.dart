@@ -566,6 +566,8 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
   StateModel? _selectedState;
   CityModel? _selectedCity;
   AllowedAddressModel? _selectedAllowedAddress;
+  StandardModel? _selectedStandard;
+  DivisionModel? _selectedDivision;
   bool _saving = false;
   String? _formError;
 
@@ -580,8 +582,14 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
       _pincodeController.text = existing.pincode ?? '';
       _phoneController.text = existing.phoneNumber ?? '';
       _altPhoneController.text = existing.altPhoneNumber ?? '';
-      WidgetsBinding.instance.addPostFrameCallback((_) => _prefillLocation());
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final lookup = context.read<LookupProvider>();
+      await lookup.fetchChildrenLookups();
+      if (existing != null && mounted) {
+        _prefillLocation();
+      }
+    });
   }
 
   Future<void> _prefillLocation() async {
@@ -597,13 +605,38 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
       if (_selectedCity != null) {
         await lookup.fetchAllowedAddressesByCity(_selectedCity!.id);
         if (!mounted) return;
+
+        final parts = existing.addressLine.split(', ');
+        final mainAddress = parts.first;
+
         setState(() {
           _selectedAllowedAddress = lookup.allowedAddresses
-              .where((a) => a.addressLine.trim().toLowerCase() == existing.addressLine.trim().toLowerCase())
+              .where((a) => a.addressLine.trim().toLowerCase() == mainAddress.trim().toLowerCase())
               .firstOrNull;
           if (_selectedAllowedAddress != null) {
             _addressController.text = _selectedAllowedAddress!.addressLine;
             _pincodeController.text = _selectedAllowedAddress!.pincode;
+
+            // Extract standard and division
+            String? parsedStandard;
+            String? parsedDiv;
+            for (final part in parts) {
+              if (part.startsWith('Standard: ')) {
+                parsedStandard = part.replaceFirst('Standard: ', '').trim();
+              } else if (part.startsWith('Div: ')) {
+                parsedDiv = part.replaceFirst('Div: ', '').trim();
+              }
+            }
+            if (parsedStandard != null) {
+              _selectedStandard = lookup.standards
+                  .where((s) => s.displayName.trim().toLowerCase() == parsedStandard!.toLowerCase())
+                  .firstOrNull;
+            }
+            if (parsedDiv != null) {
+              _selectedDivision = lookup.divisions
+                  .where((d) => d.name.trim().toLowerCase() == parsedDiv!.toLowerCase())
+                  .firstOrNull;
+            }
           }
         });
       }
@@ -642,12 +675,31 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     final allowedAddress = _selectedAllowedAddress;
     final phone = _phoneController.text.trim();
     final altPhone = _altPhoneController.text.trim();
+    final lookup = context.read<LookupProvider>();
 
     if (state == null || city == null || allowedAddress == null) {
       setState(() => _formError = 'Select state, city and an allowed delivery address.');
       return;
     }
-    final line = allowedAddress.addressLine;
+
+    final isSchoolSelected = allowedAddress.type == 'school' ||
+        allowedAddress.addressLine.trim().toLowerCase().startsWith('school:') ||
+        lookup.schools.any((s) =>
+            allowedAddress.addressLine.toLowerCase().contains(s.name.toLowerCase()));
+
+    if (isSchoolSelected && _selectedStandard == null) {
+      setState(() => _formError = 'Standard (class) is required for school delivery.');
+      return;
+    }
+
+    String line = allowedAddress.addressLine;
+    if (isSchoolSelected && _selectedStandard != null) {
+      line += ", Standard: ${_selectedStandard!.displayName}";
+      if (_selectedDivision != null) {
+        line += ", Div: ${_selectedDivision!.name}";
+      }
+    }
+
     final pin = allowedAddress.pincode;
 
     if (phone.isEmpty) {
@@ -855,6 +907,8 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       onChanged: (v) {
                         setState(() {
                           _selectedAllowedAddress = v;
+                          _selectedStandard = null;
+                          _selectedDivision = null;
                           _formError = null;
                           if (v != null) {
                             _addressController.text = v.addressLine;
@@ -866,6 +920,59 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                         });
                       },
                     ),
+                    () {
+                      final isSchoolSelected = _selectedAllowedAddress != null &&
+                          (_selectedAllowedAddress!.type == 'school' ||
+                           _selectedAllowedAddress!.addressLine.trim().toLowerCase().startsWith('school:') ||
+                           lookup.schools.any((s) =>
+                               _selectedAllowedAddress!.addressLine.toLowerCase().contains(s.name.toLowerCase())));
+                      if (!isSchoolSelected) return const SizedBox.shrink();
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 16),
+                          SearchableDropdown<StandardModel>(
+                            label: 'Standard',
+                            items: lookup.standards,
+                            itemLabel: (s) => s.displayName,
+                            value: _selectedStandard,
+                            isLoading: lookup.isLoading,
+                            listenable: lookup,
+                            itemsGetter: () => lookup.standards,
+                            loadingGetter: () => lookup.isLoading,
+                            onInteraction: () {
+                              FocusScope.of(context).unfocus();
+                            },
+                            onChanged: (v) {
+                              setState(() {
+                                _selectedStandard = v;
+                                _formError = null;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          SearchableDropdown<DivisionModel>(
+                            label: 'Division',
+                            items: lookup.divisions,
+                            itemLabel: (d) => d.name,
+                            value: _selectedDivision,
+                            isLoading: lookup.isLoading,
+                            listenable: lookup,
+                            itemsGetter: () => lookup.divisions,
+                            loadingGetter: () => lookup.isLoading,
+                            onInteraction: () {
+                              FocusScope.of(context).unfocus();
+                            },
+                            onChanged: (v) {
+                              setState(() {
+                                _selectedDivision = v;
+                                _formError = null;
+                              });
+                            },
+                          ),
+                        ],
+                      );
+                    }(),
                     const SizedBox(height: 16),
                     // Pincode (read-only and pre-filled)
                     TextField(

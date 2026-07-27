@@ -384,6 +384,7 @@ class AllowedAddressModel {
   final String addressLine;
   final String pincode;
   final bool isActive;
+  final String? type;
 
   AllowedAddressModel({
     required this.id,
@@ -392,6 +393,7 @@ class AllowedAddressModel {
     required this.addressLine,
     required this.pincode,
     this.isActive = true,
+    this.type,
   });
 
   factory AllowedAddressModel.fromJson(Map<String, dynamic> json) {
@@ -402,6 +404,7 @@ class AllowedAddressModel {
       addressLine: json['address_line'] ?? '',
       pincode: json['pincode'] ?? '',
       isActive: json['is_active'] ?? true,
+      type: json['type']?.toString(),
     );
   }
 
@@ -413,6 +416,7 @@ class AllowedAddressModel {
       'address_line': addressLine,
       'pincode': pincode,
       'is_active': isActive,
+      'type': type,
     };
   }
 }

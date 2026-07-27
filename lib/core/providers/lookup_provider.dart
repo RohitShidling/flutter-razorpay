@@ -193,7 +193,7 @@ class LookupProvider with ChangeNotifier {
 
   Future<void> fetchChildrenLookups({bool force = false}) async {
     if (!NetworkStatusService.instance.isOnline) {
-      if (_schools.isNotEmpty && _standards.isNotEmpty && _mealSizes.isNotEmpty) return;
+      if (_schools.isNotEmpty && _standards.isNotEmpty && _mealSizes.isNotEmpty && _divisions.isNotEmpty) return;
       await _loadFromCache();
       return;
     }
@@ -205,10 +205,12 @@ class LookupProvider with ChangeNotifier {
         _repository.getSchools(),
         _repository.getStandards(),
         _repository.getMealSizes(),
+        _repository.getDivisions(),
       ]);
       _schools = results[0] as List<SchoolModel>;
       _standards = results[1] as List<StandardModel>;
       _mealSizes = results[2] as List<MealSizeModel>;
+      _divisions = results[3] as List<DivisionModel>;
       notifyListeners();
       await _persistCache();
     } catch (_) {}

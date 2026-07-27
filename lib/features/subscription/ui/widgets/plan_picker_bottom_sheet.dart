@@ -165,6 +165,7 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
       await cart.fetchCart(silent: true);
       if (!mounted) return;
       Navigator.pop(context);
+      ErrorHandler.showSuccess(context, '${plan.planName} plan added to cart.');
     } else {
       ErrorHandler.showError(context, cart.error ?? 'Could not add to cart');
     }

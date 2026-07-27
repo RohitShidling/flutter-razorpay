@@ -138,10 +138,8 @@ class MenuProvider with ChangeNotifier {
       final cached = await CacheStore.getJson('today_menu');
       if (cached is Map<String, dynamic>) {
         _isSubscribed = cached['is_subscribed'] ?? false;
-        if (_isSubscribed) {
-          _todayMenu = cached['menu'] != null ? Map<String, dynamic>.from(cached['menu']) : null;
-          _subscriptionSummary = cached['subscription_summary'] ?? [];
-        }
+        _todayMenu = cached['menu'] != null ? Map<String, dynamic>.from(cached['menu']) : null;
+        _subscriptionSummary = cached['subscription_summary'] ?? [];
         _homeMealMessage = cached['message']?.toString();
         _hasInitiallyLoaded = true;
         notifyListeners();
@@ -165,32 +163,27 @@ class MenuProvider with ChangeNotifier {
       final mealResponse = await _dioClient.dio.get('/api/client/meals/today');
       final data = mealResponse.data;
       _isSubscribed = data['is_subscribed'] ?? false;
-      if (_isSubscribed) {
-        if (data['menu'] is Map<String, dynamic>) {
-          final menu = Map<String, dynamic>.from(data['menu']);
-          List<String> nutritionPoints = [];
-          try {
-            final nutritionResponse = await _dioClient.dio.get(ApiEndpoints.clientMenuNutritionToday);
-            final nutritionData = nutritionResponse.data;
-            nutritionPoints = _extractNutrition(nutritionData['data']?['nutrition_points']);
-          } catch (_) {
-            // Keep menu working even if nutrition endpoint fails temporarily.
-          }
-          menu['nutrition_points'] = nutritionPoints;
-          _todayMenu = menu;
-        } else {
-          _todayMenu = null;
+      if (data['menu'] is Map<String, dynamic>) {
+        final menu = Map<String, dynamic>.from(data['menu']);
+        List<String> nutritionPoints = [];
+        try {
+          final nutritionResponse = await _dioClient.dio.get(ApiEndpoints.clientMenuNutritionToday);
+          final nutritionData = nutritionResponse.data;
+          nutritionPoints = _extractNutrition(nutritionData['data']?['nutrition_points']);
+        } catch (_) {
+          // Keep menu working even if nutrition endpoint fails temporarily.
         }
-        _subscriptionSummary = data['subscription_summary'] ?? [];
-        await _cache.saveJson(_todayCacheKey, {
-          'is_subscribed': _isSubscribed,
-          'menu': _todayMenu,
-          'subscription_summary': _subscriptionSummary,
-        });
+        menu['nutrition_points'] = nutritionPoints;
+        _todayMenu = menu;
       } else {
         _todayMenu = null;
-        _subscriptionSummary = [];
       }
+      _subscriptionSummary = data['subscription_summary'] ?? [];
+      await _cache.saveJson(_todayCacheKey, {
+        'is_subscribed': _isSubscribed,
+        'menu': _todayMenu,
+        'subscription_summary': _subscriptionSummary,
+      });
       _homeMealMessage = data['message']?.toString();
       _lastTodayFetchedAt = DateTime.now();
       // Cache the response structure
