@@ -545,58 +545,54 @@ class _ChildFormState extends State<_ChildForm> {
     _timeController = TextEditingController(text: backendTime ?? '');
     _timeDisplayController = TextEditingController(text: TimeUtils.formatToDisplay(backendTime));
     _initialSnapshot = '';
-
-    // If editing, fetch lookup data to pre-fill selections
-    if (widget.child != null) {
-      _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final lookup = context.read<LookupProvider>();
-        await lookup.fetchChildrenLookups();
-        if (mounted) {
-          await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
-        }
+    _isLoading = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final lookup = context.read<LookupProvider>();
+      await lookup.fetchChildrenLookups();
+      if (mounted) {
+        await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
+      }
+      
+      SchoolModel? school;
+      StandardModel? standard;
+      DivisionModel? division;
+      MealSizeModel? mealSize;
+      StateModel? state;
+      CityModel? city;
+      
+      if (mounted && widget.child != null) {
+        school = lookup.schools.where((s) => s.id == widget.child!.schoolId).firstOrNull;
+        standard = lookup.standards.where((s) => s.id == widget.child!.standardId).firstOrNull;
+        division = lookup.divisions.where((d) => d.id == widget.child!.divisionId).firstOrNull;
+        mealSize = lookup.mealSizes.where((s) => s.id == widget.child!.mealSizeId).firstOrNull;
         
-        SchoolModel? school;
-        StandardModel? standard;
-        DivisionModel? division;
-        MealSizeModel? mealSize;
-        StateModel? state;
-        CityModel? city;
-        
-        if (mounted) {
-          school = lookup.schools.where((s) => s.id == widget.child!.schoolId).firstOrNull;
-          standard = lookup.standards.where((s) => s.id == widget.child!.standardId).firstOrNull;
-          division = lookup.divisions.where((d) => d.id == widget.child!.divisionId).firstOrNull;
-          mealSize = lookup.mealSizes.where((s) => s.id == widget.child!.mealSizeId).firstOrNull;
-          
-          if (school != null) {
-            state = lookup.states.where((s) => s.name.toLowerCase() == school!.state.toLowerCase()).firstOrNull;
-            if (state != null) {
-              await lookup.fetchCitiesByState(state.id);
-              if (mounted) {
-                city = lookup.cities.where((c) => c.name.toLowerCase() == school!.city.toLowerCase()).firstOrNull;
-              }
+        if (school != null) {
+          state = lookup.states.where((s) => s.name.toLowerCase() == school!.state.toLowerCase()).firstOrNull;
+          if (state != null) {
+            await lookup.fetchCitiesByState(state.id);
+            if (mounted) {
+              city = lookup.cities.where((c) => c.name.toLowerCase() == school!.city.toLowerCase()).firstOrNull;
             }
           }
         }
-        
-        if (mounted) {
-          setState(() {
-            _selectedSchool = school;
-            _selectedStandard = standard;
-            _selectedDivision = division;
-            _selectedMealSize = mealSize;
-            _selectedState = state;
-            _selectedCity = city;
-            _schoolLocksLocation = school != null;
-            _isLoading = false;
-          });
-          _captureSnapshot();
-        }
-      });
-    } else {
-      _captureSnapshot();
-    }
+      } else if (mounted) {
+        mealSize = null;
+      }
+      
+      if (mounted) {
+        setState(() {
+          _selectedSchool = school;
+          _selectedStandard = standard;
+          _selectedDivision = division;
+          _selectedMealSize = mealSize;
+          _selectedState = state;
+          _selectedCity = city;
+          _schoolLocksLocation = school != null;
+          _isLoading = false;
+        });
+        _captureSnapshot();
+      }
+    });
   }
 
   @override
@@ -1023,7 +1019,7 @@ class _ChildFormState extends State<_ChildForm> {
               const SizedBox(height: 16),
               // Division
               SearchableDropdown<DivisionModel>(
-                label: 'Division',
+                label: 'Division (Optional)',
                 items: lookup.divisions,
                 itemLabel: (d) => d.name,
                 value: _selectedDivision,
@@ -1080,7 +1076,7 @@ class _ChildFormState extends State<_ChildForm> {
                     : lookup.cities,
                 itemLabel: (c) => c.name,
                 value: _selectedCity,
-                enabled: !_schoolLocksLocation,
+                enabled: !_schoolLocksLocation && _selectedState != null,
                 isLoading: lookup.isLoading,
                 listenable: lookup,
                 itemsGetter: () => lookup.cities,

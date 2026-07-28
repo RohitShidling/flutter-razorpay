@@ -516,59 +516,55 @@ class _TeacherFormState extends State<_TeacherForm> {
     _timeController = TextEditingController(text: backendTime ?? '');
     _timeDisplayController = TextEditingController(text: TimeUtils.formatToDisplay(_timeController.text));
     _initialSnapshot = '';
+    _isLoading = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final lookup = context.read<LookupProvider>();
+      await lookup.fetchTeacherLookups();
+      if (mounted) {
+        await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
+      }
 
-    if (widget.profile != null) {
-      _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final lookup = context.read<LookupProvider>();
-        await lookup.fetchTeacherLookups();
-        if (mounted) {
-          await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
-        }
+      SchoolModel? school;
+      StateModel? state;
+      CityModel? city;
+      MealSizeModel? mealSize;
 
-        SchoolModel? school;
-        StateModel? state;
-        CityModel? city;
-        MealSizeModel? mealSize;
+      if (mounted && widget.profile != null) {
+        school = lookup.schools.where((s) => s.name == widget.profile!.schoolCollegeName).firstOrNull;
+        state = lookup.states.where((s) => s.name.toLowerCase() == widget.profile!.state.toLowerCase()).firstOrNull;
+        mealSize = lookup.mealSizes.where((s) => s.id == widget.profile!.mealSizeId).firstOrNull;
 
-        if (mounted) {
-          school = lookup.schools.where((s) => s.name == widget.profile!.schoolCollegeName).firstOrNull;
-          state = lookup.states.where((s) => s.name.toLowerCase() == widget.profile!.state.toLowerCase()).firstOrNull;
-          mealSize = lookup.mealSizes.where((s) => s.id == widget.profile!.mealSizeId).firstOrNull;
-
-          if (school != null) {
-            state = lookup.states.where((s) => s.name.toLowerCase() == school!.state.toLowerCase()).firstOrNull;
-            if (state != null) {
-              await lookup.fetchCitiesByState(state.id);
-              if (mounted) {
-                city = lookup.cities.where((c) => c.name.toLowerCase() == school!.city.toLowerCase()).firstOrNull;
-              }
+        if (school != null) {
+          state = lookup.states.where((s) => s.name.toLowerCase() == school!.state.toLowerCase()).firstOrNull;
+          if (state != null) {
+            await lookup.fetchCitiesByState(state.id);
+            if (mounted) {
+              city = lookup.cities.where((c) => c.name.toLowerCase() == school!.city.toLowerCase()).firstOrNull;
             }
           }
+        } else if (state != null) {
+          await lookup.fetchCitiesByState(state.id);
+          if (mounted) {
+            city = lookup.cities.where((c) => c.name.toLowerCase() == widget.profile!.city.toLowerCase()).firstOrNull;
+          }
         }
+      } else if (mounted) {
+        final band = MealSizeRecommendations.recommendedBandForTeacher();
+        mealSize = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
+      }
 
-        if (mounted) {
-          setState(() {
-            _selectedSchool = school;
-            _selectedState = state;
-            _selectedCity = city;
-            _selectedMealSize = mealSize;
-            _schoolLocksLocation = school != null;
-            _isLoading = false;
-          });
-          _captureSnapshot();
-        }
-      });
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final lookup = context.read<LookupProvider>();
-        final band = MealSizeRecommendations.recommendedBandForTeacherOrProfessional();
+      if (mounted) {
         setState(() {
-          _selectedMealSize = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
+          _selectedSchool = school;
+          _selectedState = state;
+          _selectedCity = city;
+          _selectedMealSize = mealSize;
+          _schoolLocksLocation = school != null;
+          _isLoading = false;
         });
         _captureSnapshot();
-      });
-    }
+      }
+    });
   }
 
   @override
@@ -917,7 +913,7 @@ class _TeacherFormState extends State<_TeacherForm> {
                     items: lookup.cities,
                     itemLabel: (s) => s.name,
                     value: _selectedCity,
-                    enabled: !_schoolLocksLocation,
+                    enabled: !_schoolLocksLocation && _selectedState != null,
                     isLoading: lookup.isLoading,
                     listenable: lookup,
                     itemsGetter: () => lookup.cities,
@@ -945,7 +941,7 @@ class _TeacherFormState extends State<_TeacherForm> {
                     itemLabel: (m) => MealSizeRecommendations.mealSizeLabel(
                       m,
                       showRecommended: true,
-                      band: MealSizeRecommendations.recommendedBandForTeacherOrProfessional(),
+                      band: MealSizeRecommendations.recommendedBandForTeacher(),
                     ),
                     value: _selectedMealSize,
                     enabled: !_blocksMealSizeChange,

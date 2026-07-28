@@ -308,7 +308,14 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
                         padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
                         children: [
                           if (regular.isNotEmpty) ...[
-                            _sectionTitle('$regularPlanName plans', isDark),
+                            _sectionTitle(
+                              regularPlanName.toLowerCase().endsWith('plan')
+                                  ? '${regularPlanName}s'
+                                  : (regularPlanName.toLowerCase().endsWith('plans')
+                                      ? regularPlanName
+                                      : '$regularPlanName plans'),
+                              isDark,
+                            ),
                             const SizedBox(height: 10),
                             ...regular.map((p) => _planCard(context, p, isDark)),
                             const SizedBox(height: 20),

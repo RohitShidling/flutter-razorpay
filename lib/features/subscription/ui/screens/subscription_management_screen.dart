@@ -443,9 +443,11 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         } else if (orderType == 'bulk') {
           planName = 'Bulk Order';
         } else if (orderType == 'meal_size_upgrade') {
-          planName = 'Meal pack resize';
+          final changeLabel = _safeString(payment['size_change_label'], '');
+          planName = changeLabel.isNotEmpty ? 'Meal Pack Upgrade ($changeLabel)' : 'Meal Pack Upgrade';
         } else if (orderType == 'meal_size_downgrade') {
-          planName = 'Meal pack downsize (wallet)';
+          final changeLabel = _safeString(payment['size_change_label'], '');
+          planName = changeLabel.isNotEmpty ? 'Meal Pack Downgrade ($changeLabel)' : 'Meal Pack Downgrade (wallet)';
         } else if (orderType == 'referral_reward') {
           planName = _safeString(payment['plan_name'], 'Referral Reward');
         } else if (orderType == 'referral_applied') {

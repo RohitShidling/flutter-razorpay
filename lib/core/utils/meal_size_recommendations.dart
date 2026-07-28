@@ -39,8 +39,8 @@ class MealSizeRecommendations {
   /// `'small'` | `'medium'` | `'large'` for child grade bands.
   static String recommendedBandForChildGrade(int? grade) {
     if (grade == null) return 'small';
-    if (grade >= 1 && grade <= 4) return 'small';
-    if (grade >= 5 && grade <= 8) return 'medium';
+    if (grade >= 1 && grade <= 5) return 'small';
+    if (grade >= 6 && grade <= 10) return 'medium';
     return 'large';
   }
 
@@ -48,23 +48,32 @@ class MealSizeRecommendations {
     return recommendedBandForChildGrade(parseStandardGrade(standardName, standardId));
   }
 
-  static String recommendedBandForTeacherOrProfessional() => 'large';
+  static String recommendedBandForTeacher() => 'staff';
+  static String recommendedBandForProfessional() => 'coporate';
 
   static bool _sizeNameMatchesBand(String sizeName, String band) {
     final n = sizeName.toLowerCase();
-    switch (band) {
+    switch (band.toLowerCase()) {
       case 'small':
         return n.contains('small') || n.contains('s ');
       case 'medium':
         return n.contains('medium') || n.contains('med');
       case 'large':
         return n.contains('large') || n.contains('big');
+      case 'staff':
+        return n.contains('staff') || n.contains('school') || n.contains('college');
+      case 'coporate':
+      case 'corporate':
+        return n.contains('corporate') || n.contains('coporate') || n.contains('professional');
       default:
         return false;
     }
   }
 
   static bool isRecommendedMealSize(MealSizeModel size, String band) {
+    if (size.recommendedForBand != null) {
+      return size.recommendedForBand!.toLowerCase() == band.toLowerCase();
+    }
     return _sizeNameMatchesBand('${size.name} ${size.displayName}', band);
   }
 
@@ -75,7 +84,7 @@ class MealSizeRecommendations {
     return '${size.displayName} (Recommended)';
   }
 
-  /// First catalog row matching [band] (small / medium / large).
+  /// First catalog row matching [band] (small / medium / large / staff / coporate).
   static MealSizeModel? pickForBand(List<MealSizeModel> sizes, String band) {
     for (final s in sizes) {
       if (isRecommendedMealSize(s, band)) return s;
@@ -92,8 +101,9 @@ class MealSizeRecommendations {
       case 'child':
         return recommendedBandForChild(standardName, standardId ?? 0);
       case 'teacher':
+        return recommendedBandForTeacher();
       case 'professional':
-        return recommendedBandForTeacherOrProfessional();
+        return recommendedBandForProfessional();
       default:
         return null;
     }

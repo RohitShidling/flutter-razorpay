@@ -60,6 +60,10 @@ class LookupProvider with ChangeNotifier {
       if (resizeEnabled is bool) {
         _isMealResizeEnabled = resizeEnabled;
       }
+      final lastFetched = raw['lastFetchedAt'];
+      if (lastFetched is String) {
+        _lastFetchedAt = DateTime.tryParse(lastFetched);
+      }
       notifyListeners();
     } catch (_) {
       // ignore cache parse errors
@@ -79,6 +83,7 @@ class LookupProvider with ChangeNotifier {
       'contactUsInfo': _contactUsInfo?.toJson(),
       'regularPlanName': _regularPlanName,
       'isMealResizeEnabled': _isMealResizeEnabled,
+      'lastFetchedAt': _lastFetchedAt?.toIso8601String(),
     }, ttl: const Duration(days: 7));
   }
 
@@ -190,10 +195,9 @@ class LookupProvider with ChangeNotifier {
       notifyListeners();
     } catch (_) {}
   }
-
   Future<void> fetchChildrenLookups({bool force = false}) async {
     if (!NetworkStatusService.instance.isOnline) {
-      if (_schools.isNotEmpty && _standards.isNotEmpty && _mealSizes.isNotEmpty && _divisions.isNotEmpty) return;
+      if (_schools.isNotEmpty && _standards.isNotEmpty && _mealSizes.isNotEmpty && _divisions.isNotEmpty && _states.isNotEmpty) return;
       await _loadFromCache();
       return;
     }
@@ -206,11 +210,13 @@ class LookupProvider with ChangeNotifier {
         _repository.getStandards(),
         _repository.getMealSizes(),
         _repository.getDivisions(),
+        _repository.getStates(),
       ]);
       _schools = results[0] as List<SchoolModel>;
       _standards = results[1] as List<StandardModel>;
       _mealSizes = results[2] as List<MealSizeModel>;
       _divisions = results[3] as List<DivisionModel>;
+      _states = results[4] as List<StateModel>;
       notifyListeners();
       await _persistCache();
     } catch (_) {}
@@ -218,7 +224,7 @@ class LookupProvider with ChangeNotifier {
 
   Future<void> fetchTeacherLookups({bool force = false}) async {
     if (!NetworkStatusService.instance.isOnline) {
-      if (_schools.isNotEmpty && _standards.isNotEmpty && _states.isNotEmpty && _divisions.isNotEmpty) return;
+      if (_schools.isNotEmpty && _standards.isNotEmpty && _states.isNotEmpty && _divisions.isNotEmpty && _mealSizes.isNotEmpty) return;
       await _loadFromCache();
       return;
     }
@@ -231,11 +237,13 @@ class LookupProvider with ChangeNotifier {
         _repository.getStandards(),
         _repository.getStates(),
         _repository.getDivisions(),
+        _repository.getMealSizes(),
       ]);
       _schools = results[0] as List<SchoolModel>;
       _standards = results[1] as List<StandardModel>;
       _states = results[2] as List<StateModel>;
       _divisions = results[3] as List<DivisionModel>;
+      _mealSizes = results[4] as List<MealSizeModel>;
       notifyListeners();
       await _persistCache();
     } catch (_) {}
@@ -243,7 +251,7 @@ class LookupProvider with ChangeNotifier {
 
   Future<void> fetchProfessionalLookups({bool force = false}) async {
     if (!NetworkStatusService.instance.isOnline) {
-      if (_corporateLocations.isNotEmpty && _states.isNotEmpty && _divisions.isNotEmpty && _deliveryTimeSettings != null) return;
+      if (_corporateLocations.isNotEmpty && _states.isNotEmpty && _divisions.isNotEmpty && _deliveryTimeSettings != null && _mealSizes.isNotEmpty) return;
       await _loadFromCache();
       return;
     }
@@ -256,11 +264,13 @@ class LookupProvider with ChangeNotifier {
         _repository.getStates(),
         _repository.getDivisions(),
         _repository.getDeliveryTimeSettings(),
+        _repository.getMealSizes(),
       ]);
       _corporateLocations = results[0] as List<CorporateLocationModel>;
       _states = results[1] as List<StateModel>;
       _divisions = results[2] as List<DivisionModel>;
       _deliveryTimeSettings = results[3] as DeliveryTimeSettingsModel?;
+      _mealSizes = results[4] as List<MealSizeModel>;
       notifyListeners();
       await _persistCache();
     } catch (_) {}
