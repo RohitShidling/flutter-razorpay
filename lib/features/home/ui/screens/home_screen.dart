@@ -88,6 +88,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final auth = context.read<AuthProvider>();
     final forceFresh = auth.consumePendingDashboardRefresh();
 
+    // Fetch initial lookup configurations (including plan naming)
+    if (mounted) {
+      context.read<LookupProvider>().fetchInitialData(force: forceFresh);
+    }
+
     if (forceFresh) {
       await Future.wait([
         context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
@@ -1383,7 +1388,7 @@ class FeatureQuickLinks extends StatelessWidget {
           order,
           _buildQuickLinkCard(
             context: context,
-            title: 'Manage Child',
+            title: entry.name,
             icon: CupertinoIcons.person_3_fill,
             bgColor: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
             iconColor: const Color(0xFF3B82F6),
@@ -1400,7 +1405,7 @@ class FeatureQuickLinks extends StatelessWidget {
           order,
           _buildQuickLinkCard(
             context: context,
-            title: 'Teacher Plan',
+            title: entry.name,
             icon: CupertinoIcons.book_fill,
             bgColor: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
             iconColor: const Color(0xFFD97706),
@@ -1417,7 +1422,7 @@ class FeatureQuickLinks extends StatelessWidget {
           order,
           _buildQuickLinkCard(
             context: context,
-            title: 'Professional Plan',
+            title: entry.name,
             icon: CupertinoIcons.briefcase_fill,
             bgColor: isDark ? const Color(0xFF4C1D95) : const Color(0xFFE9D5FF),
             iconColor: const Color(0xFF8B5CF6),
@@ -1434,7 +1439,7 @@ class FeatureQuickLinks extends StatelessWidget {
           order,
           _buildQuickLinkCard(
             context: context,
-            title: 'Bulk Order',
+            title: entry.name,
             icon: CupertinoIcons.square_stack_3d_up_fill,
             bgColor: isDark ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5),
             iconColor: const Color(0xFF10B981),

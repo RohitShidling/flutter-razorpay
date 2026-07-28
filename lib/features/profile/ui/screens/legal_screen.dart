@@ -84,7 +84,17 @@ class LegalScreen extends StatelessWidget {
           isDark: isDark,
         ),
         _buildSectionCard(
-          title: '4. Contact Us',
+          title: '4. Subscription Meal Pack Resizing & Wallet Refunds',
+          content: 'Active subscribers may upgrade or downgrade their meal pack size directly on the Platform subject to the following rules:\n\n'
+              '• Prorated Calculation: Adjustments are calculated strictly on remaining unused meals against the full plan cycle duration.\n'
+              '• Upgrades: Moving to a larger pack requires paying the prorated rate difference for remaining meals.\n'
+              '• Downgrades & Wallet Credit: Moving to a smaller pack automatically credits the prorated refund difference instantly to your Buuttii Wallet.\n'
+              '• 24-Hour Cooldown: To ensure kitchen fulfillment stability, meal pack resizing is permitted once every 24 hours per active subscription.\n'
+              '• Ceiling Rounding: All prorated adjustments are rounded up to the nearest rupee.',
+          isDark: isDark,
+        ),
+        _buildSectionCard(
+          title: '5. Contact Us',
           content: 'If you have any questions about your order or need immediate assistance with a meal you just received, please reach out to our customer support team right away. We are dedicated to ensuring you have a delicious experience!',
           isDark: isDark,
         ),

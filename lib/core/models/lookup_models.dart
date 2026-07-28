@@ -82,6 +82,7 @@ class MealSizeModel {
   final String displayName;
   final int sortOrder;
   final bool isAvailableForOneDayLunch;
+  final String? recommendedForBand;
 
   MealSizeModel({
     required this.id,
@@ -89,6 +90,7 @@ class MealSizeModel {
     required this.displayName,
     this.sortOrder = 0,
     this.isAvailableForOneDayLunch = true,
+    this.recommendedForBand,
   });
 
   factory MealSizeModel.fromJson(Map<String, dynamic> json) {
@@ -98,6 +100,7 @@ class MealSizeModel {
       displayName: json['display_name'],
       sortOrder: int.tryParse('${json['sort_order'] ?? 0}') ?? 0,
       isAvailableForOneDayLunch: json['is_available_for_one_day_lunch'] ?? true,
+      recommendedForBand: json['recommended_for_band'] as String?,
     );
   }
 
@@ -108,6 +111,7 @@ class MealSizeModel {
       'display_name': displayName,
       'sort_order': sortOrder,
       'is_available_for_one_day_lunch': isAvailableForOneDayLunch,
+      'recommended_for_band': recommendedForBand,
     };
   }
 

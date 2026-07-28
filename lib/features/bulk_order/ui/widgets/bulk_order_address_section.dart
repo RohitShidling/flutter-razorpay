@@ -700,7 +700,16 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
       }
     }
 
-    final pin = allowedAddress.pincode;
+    final pin = _pincodeController.text.trim();
+
+    if (pin.isEmpty) {
+      setState(() => _formError = 'Pincode is required.');
+      return;
+    }
+    if (pin.length != 6 || int.tryParse(pin) == null) {
+      setState(() => _formError = 'Pincode must be exactly 6 digits.');
+      return;
+    }
 
     if (phone.isEmpty) {
       setState(() => _formError = 'Phone number is required.');
@@ -852,6 +861,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       items: lookup.cities,
                       itemLabel: (c) => c.name,
                       value: _selectedCity,
+                      enabled: _selectedState != null,
                       isLoading: lookup.isLoading,
                       listenable: lookup,
                       itemsGetter: () => lookup.cities,
@@ -894,6 +904,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       items: lookup.allowedAddresses,
                       itemLabel: (a) => '${a.addressLine} (${a.pincode})',
                       value: _selectedAllowedAddress,
+                      enabled: _selectedCity != null,
                       isLoading: lookup.isLoading,
                       listenable: lookup,
                       itemsGetter: () => lookup.allowedAddresses,
@@ -974,16 +985,16 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       );
                     }(),
                     const SizedBox(height: 16),
-                    // Pincode (read-only and pre-filled)
+                    // Pincode (pre-filled but editable)
                     TextField(
                       controller: _pincodeController,
                       keyboardType: TextInputType.number,
-                      readOnly: true,
+                      readOnly: false,
                       maxLength: 6,
                       decoration: const InputDecoration(
-                        labelText: 'Pincode',
+                        labelText: 'Pincode *',
                         counterText: '',
-                        hintText: 'Pincode is auto-filled',
+                        hintText: 'Enter 6-digit pincode',
                         prefixIcon: Icon(CupertinoIcons.number),
                       ),
                     ),

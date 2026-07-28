@@ -167,7 +167,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           }
         }
       } else if (mounted) {
-        final band = MealSizeRecommendations.recommendedBandForTeacherOrProfessional();
+        final band = MealSizeRecommendations.recommendedBandForTeacher();
         setState(() {
           _isEditing = true;
           _isInitializing = false;
@@ -539,7 +539,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       items: lookupProvider.cities,
                       itemLabel: (s) => s.name,
                       value: _selectedCity,
-                      enabled: !_schoolLocksLocation,
+                      enabled: !_schoolLocksLocation && _selectedState != null,
                       isLoading: lookupProvider.isLoading,
                       listenable: lookupProvider,
                       itemsGetter: () => lookupProvider.cities,
@@ -569,7 +569,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       itemLabel: (m) => MealSizeRecommendations.mealSizeLabel(
                         m,
                         showRecommended: true,
-                        band: MealSizeRecommendations.recommendedBandForTeacherOrProfessional(),
+                        band: MealSizeRecommendations.recommendedBandForTeacher(),
                       ),
                       value: _selectedMealSize,
                       enabled: !_blocksMealSizeChange,

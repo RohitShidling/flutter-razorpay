@@ -80,6 +80,8 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
   bool _loadingWalletPreview = false;
   double? _walletApplied;
   double? _gatewayAmount;
+  int _resizeCount = 0;
+  int _maxResizes = 2;
 
   static double _parseMoney(dynamic value) {
     if (value == null) return 0;
@@ -209,6 +211,8 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
         _walletBalance = _trim(payload['wallet_balance']);
         _eligible = eligible;
         _eligibleMessage = _trim(payload['message']);
+        _resizeCount = _int(payload['resize_count']) ?? 0;
+        _maxResizes = _int(payload['max_resizes']) ?? 2;
         if (_currentSizeName!.isNotEmpty && _selectedSubIndex < pay.activeSubscriptions.length) {
           final selected = pay.activeSubscriptions[_selectedSubIndex];
           if (selected is Map) {
@@ -257,15 +261,21 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
       final toName = _trim(m['to_display_name']);
       if (t == null || toName.isEmpty) continue;
       final isDowngrade = direction == 'downgrade';
-      final baseText = isDowngrade ? 'Credit to wallet' : 'One-time fee';
       final flatPrice = _trim(m['flat_price']);
-      final subtitle = baseText;
+      final priceVal = _trim(m['price']);
+
+      String subtitle = isDowngrade ? 'Credit to wallet' : 'One-time fee';
+      if (priceVal != flatPrice && flatPrice.isNotEmpty) {
+        subtitle = isDowngrade
+            ? 'Credit: ₹${MoneyFormat.display(priceVal)} (Prorated from ₹${MoneyFormat.display(flatPrice)})'
+            : 'Fee: ₹${MoneyFormat.display(priceVal)} (Prorated from ₹${MoneyFormat.display(flatPrice)})';
+      }
 
       out.add({
         'to_id': t,
         'label': toName,
         'subtitle': subtitle,
-        'price': MoneyFormat.display(m['price']),
+        'price': MoneyFormat.display(priceVal),
         'flat_price': MoneyFormat.display(flatPrice),
         'direction': direction,
       });
@@ -824,6 +834,9 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                               ),
                             ),
 
+                            _buildResizePolicyCard(context, isDark),
+                            _buildResizeQuotaCard(context, isDark),
+
                             if (_toMealSizeId != null) ...[
                               const SizedBox(height: 16),
                               Builder(
@@ -914,7 +927,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                               ),
                             ],
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
                             _sectionTitle(context, 'Choose new size'),
                             const SizedBox(height: 8),
 
@@ -996,7 +1009,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                           ],
 
                           if (history.isNotEmpty) ...[
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 24),
                             _sectionTitle(context, 'Resize history'),
                             const SizedBox(height: 12),
                             ...history.take(20).map((h) {
@@ -1011,6 +1024,23 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                               if (when.isNotEmpty) {
                                 date = DateTime.tryParse(when) ?? DateTime.now();
                               }
+
+                              final fromName = _trim(h['from_display_name'] ?? h['from_meal_size_name'] ?? h['fromMealSizeName']);
+                              final toName = _trim(h['to_display_name'] ?? h['to_meal_size_name'] ?? h['meal_size_name']);
+                              final changeLabel = _trim(h['size_change_label']);
+
+                              String sizeChangeText = '';
+                              if (changeLabel.isNotEmpty) {
+                                sizeChangeText = changeLabel;
+                              } else if (fromName.isNotEmpty && toName.isNotEmpty) {
+                                sizeChangeText = '$fromName → $toName';
+                              } else if (toName.isNotEmpty) {
+                                sizeChangeText = 'To $toName';
+                              }
+
+                              final titleText = who.isNotEmpty
+                                  ? (sizeChangeText.isNotEmpty ? '$who ($sizeChangeText)' : who)
+                                  : (sizeChangeText.isNotEmpty ? 'Resize ($sizeChangeText)' : plan);
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -1033,7 +1063,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                                     ),
                                   ),
                                   title: Text(
-                                    who.isNotEmpty ? who : plan, 
+                                    titleText, 
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       color: isDark ? Colors.white : AppTheme.textPrimaryLight,
@@ -1090,6 +1120,172 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
     ),
   ),
 );
+  }
+
+  Widget _buildResizePolicyCard(BuildContext context, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(top: 16, bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2B2521) : const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF4A3B2C) : const Color(0xFFFDE68A),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                CupertinoIcons.info_circle_fill,
+                color: Color(0xFFD97706),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Meal Pack Resizing Rules & Policy',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.amber.shade200 : const Color(0xFF92400E),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _policyPoint('Prorated Rates', 'Charges & credits are calculated strictly on your remaining unused meals against full cycle days.', isDark),
+          const SizedBox(height: 8),
+          _policyPoint('Wallet Credits for Downgrades', 'Moving to a smaller pack credits the prorated refund instantly to your Buuttii Wallet.', isDark),
+          const SizedBox(height: 8),
+          _policyPoint('24-Hour Cooldown', 'To ensure kitchen preparation stability, pack resizing is permitted once every 24 hours per active subscription.', isDark),
+          const SizedBox(height: 8),
+          _policyPoint('Billing Rounding', 'All prorated calculation amounts round up to the nearest rupee per official billing guidelines.', isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResizeQuotaCard(BuildContext context, bool isDark) {
+    final isMaxedOut = _resizeCount >= _maxResizes;
+    final remaining = (_maxResizes - _resizeCount).clamp(0, _maxResizes);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isMaxedOut
+            ? (isDark ? const Color(0xFF3F1D1D) : const Color(0xFFFEF2F2))
+            : (isDark ? const Color(0xFF1E2D24) : const Color(0xFFF0FDF4)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isMaxedOut
+              ? (isDark ? const Color(0xFF991B1B) : const Color(0xFFFCA5A5))
+              : (isDark ? const Color(0xFF166534) : const Color(0xFF86EFAC)),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isMaxedOut
+                  ? (isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFEE2E2))
+                  : (isDark ? const Color(0xFF14532D) : const Color(0xFFDCFCE7)),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isMaxedOut ? CupertinoIcons.lock_fill : CupertinoIcons.slider_horizontal_3,
+              color: isMaxedOut ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isMaxedOut ? 'Resize Limit Reached' : 'Resizes Allowance',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: isMaxedOut
+                        ? (isDark ? Colors.red.shade200 : const Color(0xFF991B1B))
+                        : (isDark ? Colors.green.shade200 : const Color(0xFF166534)),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isMaxedOut
+                      ? 'You have used both of your 2 permitted resizes for this subscription.'
+                      : '$remaining of $_maxResizes resizes remaining for this subscription cycle.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isMaxedOut ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              '$_resizeCount / $_maxResizes',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _policyPoint(String title, String desc, bool isDark) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Icon(
+            CupertinoIcons.checkmark_seal_fill,
+            size: 14,
+            color: isDark ? Colors.amber.shade400 : const Color(0xFFD97706),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.35,
+                color: isDark ? Colors.white70 : const Color(0xFF78350F),
+              ),
+              children: [
+                TextSpan(
+                  text: '$title: ',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                TextSpan(text: desc),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _sectionTitle(BuildContext context, String text) {

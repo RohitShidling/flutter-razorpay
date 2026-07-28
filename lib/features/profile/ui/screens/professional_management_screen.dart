@@ -495,7 +495,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
           }
         }
       } else if (mounted) {
-        final band = MealSizeRecommendations.recommendedBandForTeacherOrProfessional();
+        final band = MealSizeRecommendations.recommendedBandForProfessional();
         mealSize = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
       }
 
@@ -848,7 +848,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
                     items: lookup.cities,
                     itemLabel: (c) => c.name,
                     value: _selectedCity,
-                    enabled: !_corporateLocksLocation,
+                    enabled: !_corporateLocksLocation && _selectedState != null,
                     isLoading: lookup.isLoading,
                     listenable: lookup,
                     itemsGetter: () => lookup.cities,
@@ -875,7 +875,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
                     itemLabel: (m) => MealSizeRecommendations.mealSizeLabel(
                       m,
                       showRecommended: true,
-                      band: MealSizeRecommendations.recommendedBandForTeacherOrProfessional(),
+                      band: MealSizeRecommendations.recommendedBandForProfessional(),
                     ),
                     value: _selectedMealSize,
                     enabled: !_blocksMealSizeChange,

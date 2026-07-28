@@ -161,7 +161,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
           });
         }
       } else if (mounted) {
-        final band = MealSizeRecommendations.recommendedBandForTeacherOrProfessional();
+        final band = MealSizeRecommendations.recommendedBandForProfessional();
         setState(() {
           _isEditing = true;
           _isInitializing = false;
@@ -516,7 +516,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       items: lookup.cities,
                       itemLabel: (c) => c.name,
                       value: _selectedCity,
-                      enabled: !_corporateLocksLocation,
+                      enabled: !_corporateLocksLocation && _selectedState != null,
                       isLoading: lookup.isLoading,
                       listenable: lookup,
                       itemsGetter: () => lookup.cities,
@@ -543,7 +543,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       itemLabel: (m) => MealSizeRecommendations.mealSizeLabel(
                         m,
                         showRecommended: true,
-                        band: MealSizeRecommendations.recommendedBandForTeacherOrProfessional(),
+                        band: MealSizeRecommendations.recommendedBandForProfessional(),
                       ),
                       value: _selectedMealSize,
                       enabled: !_blocksMealSizeChange,

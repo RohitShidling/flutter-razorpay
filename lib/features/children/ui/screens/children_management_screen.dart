@@ -576,8 +576,7 @@ class _ChildFormState extends State<_ChildForm> {
           }
         }
       } else if (mounted) {
-        final band = MealSizeRecommendations.recommendedBandForChild(null, 0);
-        mealSize = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
+        mealSize = null;
       }
       
       if (mounted) {
@@ -1020,7 +1019,7 @@ class _ChildFormState extends State<_ChildForm> {
               const SizedBox(height: 16),
               // Division
               SearchableDropdown<DivisionModel>(
-                label: 'Division',
+                label: 'Division (Optional)',
                 items: lookup.divisions,
                 itemLabel: (d) => d.name,
                 value: _selectedDivision,
@@ -1077,7 +1076,7 @@ class _ChildFormState extends State<_ChildForm> {
                     : lookup.cities,
                 itemLabel: (c) => c.name,
                 value: _selectedCity,
-                enabled: !_schoolLocksLocation,
+                enabled: !_schoolLocksLocation && _selectedState != null,
                 isLoading: lookup.isLoading,
                 listenable: lookup,
                 itemsGetter: () => lookup.cities,

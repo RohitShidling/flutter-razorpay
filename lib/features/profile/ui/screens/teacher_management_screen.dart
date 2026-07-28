@@ -542,9 +542,14 @@ class _TeacherFormState extends State<_TeacherForm> {
               city = lookup.cities.where((c) => c.name.toLowerCase() == school!.city.toLowerCase()).firstOrNull;
             }
           }
+        } else if (state != null) {
+          await lookup.fetchCitiesByState(state.id);
+          if (mounted) {
+            city = lookup.cities.where((c) => c.name.toLowerCase() == widget.profile!.city.toLowerCase()).firstOrNull;
+          }
         }
       } else if (mounted) {
-        final band = MealSizeRecommendations.recommendedBandForTeacherOrProfessional();
+        final band = MealSizeRecommendations.recommendedBandForTeacher();
         mealSize = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
       }
 
@@ -908,7 +913,7 @@ class _TeacherFormState extends State<_TeacherForm> {
                     items: lookup.cities,
                     itemLabel: (s) => s.name,
                     value: _selectedCity,
-                    enabled: !_schoolLocksLocation,
+                    enabled: !_schoolLocksLocation && _selectedState != null,
                     isLoading: lookup.isLoading,
                     listenable: lookup,
                     itemsGetter: () => lookup.cities,
@@ -936,7 +941,7 @@ class _TeacherFormState extends State<_TeacherForm> {
                     itemLabel: (m) => MealSizeRecommendations.mealSizeLabel(
                       m,
                       showRecommended: true,
-                      band: MealSizeRecommendations.recommendedBandForTeacherOrProfessional(),
+                      band: MealSizeRecommendations.recommendedBandForTeacher(),
                     ),
                     value: _selectedMealSize,
                     enabled: !_blocksMealSizeChange,
