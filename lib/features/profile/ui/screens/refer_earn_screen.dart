@@ -510,19 +510,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
               ),
             )
           else ...[
-            RadioGroup<String>(
-              groupValue: _selectedCandidate != null ? '${_selectedCandidate!.id}_${_selectedCandidate!.type}' : null,
-              onChanged: (val) {
-                if (val != null) {
-                  final parts = val.split('_');
-                  final id = parts[0];
-                  final type = parts[1];
-                  setState(() {
-                    _selectedCandidate = candidates.firstWhere((c) => c.id == id && c.type == type);
-                  });
-                }
-              },
-              child: ListView.separated(
+            ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: candidates.length,
@@ -613,6 +601,17 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                         if (isActive)
                           Radio<String>(
                             value: '${candidate.id}_${candidate.type}',
+                            groupValue: _selectedCandidate != null ? '${_selectedCandidate!.id}_${_selectedCandidate!.type}' : null,
+                            onChanged: (val) {
+                              if (val != null) {
+                                final parts = val.split('_');
+                                final id = parts[0];
+                                final type = parts[1];
+                                setState(() {
+                                  _selectedCandidate = candidates.firstWhere((c) => c.id == id && c.type == type);
+                                });
+                              }
+                            },
                             activeColor: AppTheme.primaryColor,
                           ),
                       ],
@@ -620,7 +619,6 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                   ),
                 );
               },
-            ),
             ),
             const SizedBox(height: 16),
             Text(
