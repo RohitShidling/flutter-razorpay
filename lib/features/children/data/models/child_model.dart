@@ -67,6 +67,7 @@ class ChildModel {
       'divisionId': divisionId,
       'division_id': divisionId,
       'division_name': divisionName,
+      'division': divisionName,
       'phone_number': phoneNumber,
       'phoneNumber': phoneNumber,
     };

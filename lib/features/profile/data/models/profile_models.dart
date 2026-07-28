@@ -103,6 +103,7 @@ class ProfessionalProfileModel {
   final String? corporateLocationName;
   final int? mealSizeId;
   final String? phoneNumber;
+  final String? pincode;
 
   ProfessionalProfileModel({
     this.id,
@@ -115,6 +116,7 @@ class ProfessionalProfileModel {
     this.corporateLocationName,
     this.mealSizeId,
     this.phoneNumber,
+    this.pincode,
   });
 
   factory ProfessionalProfileModel.fromJson(Map<String, dynamic> json) {
@@ -133,6 +135,7 @@ class ProfessionalProfileModel {
       corporateLocationName: json['corporate_location_name'],
       mealSizeId: json['meal_size_id'],
       phoneNumber: json['phone_number']?.toString() ?? json['phoneNumber']?.toString(),
+      pincode: json['pincode']?.toString(),
     );
   }
 
@@ -149,6 +152,7 @@ class ProfessionalProfileModel {
       'meal_size_id': mealSizeId,
       'phone_number': phoneNumber,
       'phoneNumber': phoneNumber,
+      'pincode': pincode,
     };
   }
 }

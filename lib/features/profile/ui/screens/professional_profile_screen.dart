@@ -40,6 +40,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _timeController;
+  late TextEditingController _pincodeController;
   
   CorporateLocationModel? _selectedCorporateLocation;
   MealSizeModel? _selectedMealSize;
@@ -60,6 +61,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
     return [
       _nameController.text.trim(),
       _phoneController.text.trim(),
+      _pincodeController.text.trim(),
       _selectedCorporateLocation?.id ?? '',
       _selectedMealSize?.id ?? '',
       _selectedState?.id ?? '',
@@ -98,6 +100,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
     _nameController = TextEditingController();
     _phoneController = TextEditingController();
     _timeController = TextEditingController();
+    _pincodeController = TextEditingController();
 
     AppRouteTracker.instance.setCurrent(AppScreen.professionalProfile);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -137,6 +140,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
             _nameController.text = profile.name;
             _phoneController.text = profile.phoneNumber ?? '';
             _timeController.text = profile.lunchTime;
+            _pincodeController.text = corpLoc?.pincode ?? profile.pincode ?? '';
             _selectedCorporateLocation = corpLoc;
             _selectedState = state;
             _selectedMealSize = mealSize;
@@ -179,6 +183,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _timeController.dispose();
+    _pincodeController.dispose();
     super.dispose();
   }
 
@@ -434,6 +439,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       onChanged: (v) {
                         setState(() {
                           _selectedCorporateLocation = v;
+                          _pincodeController.text = v?.pincode ?? '';
                           if (v != null) {
                             _corporateLocksLocation = true;
                             _selectedState = lookup.states.where((s) => s.name.toLowerCase() == v.state.toLowerCase()).firstOrNull;
@@ -480,6 +486,17 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                         textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                       ),
                     ),
+                    if (_selectedCorporateLocation != null) ...[
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _pincodeController,
+                        enabled: false,
+                        decoration: const InputDecoration(
+                          labelText: 'Pincode / Zip Code',
+                          prefixIcon: Icon(CupertinoIcons.location_solid),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     // 3. State
                     SearchableDropdown<StateModel>(
@@ -793,7 +810,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                         ],
                         _buildInfoRow(CupertinoIcons.building_2_fill, profile.companyName, isDark),
                         const SizedBox(height: 14),
-                        _buildInfoRow(CupertinoIcons.location_solid, '${profile.city}, ${profile.state}', isDark),
+                        _buildInfoRow(CupertinoIcons.location_solid, '${profile.city}, ${profile.state}${profile.pincode != null && profile.pincode!.isNotEmpty ? ' - ${profile.pincode}' : ''}', isDark),
                         const SizedBox(height: 14),
                         _buildInfoRow(CupertinoIcons.clock_fill, 'Lunch Time: ${TimeUtils.formatToDisplay(profile.lunchTime)}', isDark),
                         const SizedBox(height: 14),
