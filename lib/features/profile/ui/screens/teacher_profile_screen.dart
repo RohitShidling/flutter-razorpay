@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:provider/provider.dart';
@@ -139,7 +140,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         if (mounted) {
           setState(() {
             _nameController.text = profile.name;
-            _phoneController.text = profile.phoneNumber ?? '';
+            _phoneController.text = Validators.cleanPhone(profile.phoneNumber);
             _schoolController.text = profile.schoolCollegeName;
             _cityController.text = profile.city;
             _stateController.text = profile.state;
@@ -310,7 +311,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         _isEditing = false;
         if (saved != null) {
           _nameController.text = saved.name;
-          _phoneController.text = saved.phoneNumber ?? '';
+          _phoneController.text = Validators.cleanPhone(saved.phoneNumber);
           _schoolController.text = saved.schoolCollegeName;
           _cityController.text = saved.city;
           _stateController.text = saved.state;
@@ -409,6 +410,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     TextFormField(
                       controller: _nameController,
                       autofocus: false,
+                      maxLength: 100,
+                      buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                       decoration: const InputDecoration(
                         labelText: 'Full Name',
                         prefixIcon: Icon(CupertinoIcons.person_fill),
@@ -422,6 +425,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     TextFormField(
                       controller: _phoneController,
                       autofocus: false,
+                      maxLength: 10,
+                      buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
                       decoration: const InputDecoration(
                         labelText: 'Phone Number',
                         prefixIcon: Icon(CupertinoIcons.phone_fill),
@@ -704,7 +713,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 final profile = provider.teacherProfile;
                 if (profile != null) {
                   _nameController.text = profile.name;
-                  _phoneController.text = profile.phoneNumber ?? '';
+                  _phoneController.text = Validators.cleanPhone(profile.phoneNumber);
                   _schoolController.text = profile.schoolCollegeName;
                   _cityController.text = profile.city;
                   _stateController.text = profile.state;

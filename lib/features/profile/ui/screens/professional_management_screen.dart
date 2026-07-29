@@ -465,7 +465,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
     super.initState();
 
     _nameController = TextEditingController(text: widget.profile?.name);
-    _phoneController = TextEditingController(text: widget.profile?.phoneNumber);
+    _phoneController = TextEditingController(text: Validators.cleanPhone(widget.profile?.phoneNumber));
     final backendTime = TimeUtils.tryParseToBackend(widget.profile?.lunchTime);
     _timeController = TextEditingController(text: backendTime ?? '');
     _timeDisplayController = TextEditingController(text: TimeUtils.formatToDisplay(_timeController.text));
@@ -733,6 +733,8 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
 
                   TextFormField(
                     controller: _nameController,
+                    maxLength: 100,
+                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                     decoration: const InputDecoration(
                       labelText: 'Full Name',
                       prefixIcon: Icon(CupertinoIcons.person_fill),
@@ -744,6 +746,12 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
 
                   TextFormField(
                     controller: _phoneController,
+                    maxLength: 10,
+                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
                     decoration: const InputDecoration(
                       labelText: 'Phone Number',
                       prefixIcon: Icon(CupertinoIcons.phone_fill),

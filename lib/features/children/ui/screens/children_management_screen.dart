@@ -540,7 +540,7 @@ class _ChildFormState extends State<_ChildForm> {
     
     _nameController = TextEditingController(text: widget.child?.name);
     _rollController = TextEditingController(text: widget.child?.rollNumber);
-    _phoneController = TextEditingController(text: widget.child?.phoneNumber);
+    _phoneController = TextEditingController(text: Validators.cleanPhone(widget.child?.phoneNumber));
     _divisionController = TextEditingController(text: widget.child?.divisionName);
     final backendTime = TimeUtils.tryParseToBackend(widget.child?.mealTime);
     _timeController = TextEditingController(text: backendTime ?? '');
@@ -854,6 +854,8 @@ class _ChildFormState extends State<_ChildForm> {
               TextFormField(
                 controller: _nameController,
                 autofocus: false,
+                maxLength: 100,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                 decoration: const InputDecoration(
                   labelText: 'Child Name',
                   prefixIcon: Icon(CupertinoIcons.person),
@@ -866,6 +868,12 @@ class _ChildFormState extends State<_ChildForm> {
               TextFormField(
                 controller: _phoneController,
                 autofocus: false,
+                maxLength: 10,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Phone Number',
                   prefixIcon: Icon(CupertinoIcons.phone_fill),
@@ -879,6 +887,8 @@ class _ChildFormState extends State<_ChildForm> {
               TextFormField(
                 controller: _rollController,
                 autofocus: false,
+                maxLength: 20,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                 decoration: const InputDecoration(
                   labelText: 'Roll Number',
                   prefixIcon: Icon(CupertinoIcons.number),
@@ -1020,6 +1030,8 @@ class _ChildFormState extends State<_ChildForm> {
               TextFormField(
                 controller: _divisionController,
                 autofocus: false,
+                maxLength: 50,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                 decoration: const InputDecoration(
                   labelText: 'Division (Optional)',
                   prefixIcon: Icon(CupertinoIcons.square_list),
