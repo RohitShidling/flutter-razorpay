@@ -134,6 +134,7 @@ class CorporateLocationModel {
   final String address;
   final String city;
   final String state;
+  final String pincode;
   final double extraAmount;
 
   CorporateLocationModel({
@@ -142,6 +143,7 @@ class CorporateLocationModel {
     required this.address,
     required this.city,
     required this.state,
+    required this.pincode,
     this.extraAmount = 0.0,
   });
 
@@ -152,6 +154,7 @@ class CorporateLocationModel {
       address: json['address'] ?? '',
       city: json['city'] ?? '',
       state: json['state'] ?? '',
+      pincode: json['pincode'] ?? '',
       extraAmount: double.tryParse('${json['extra_amount'] ?? 0.0}') ?? 0.0,
     );
   }
@@ -163,6 +166,7 @@ class CorporateLocationModel {
       'address': address,
       'city': city,
       'state': state,
+      'pincode': pincode,
       'extra_amount': extraAmount,
     };
   }

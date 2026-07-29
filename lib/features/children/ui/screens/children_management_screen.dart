@@ -473,11 +473,11 @@ class _ChildFormState extends State<_ChildForm> {
   late TextEditingController _phoneController;
   late TextEditingController _timeController;
   late TextEditingController _timeDisplayController;
+  late TextEditingController _divisionController;
   late String _initialSnapshot;
   
   SchoolModel? _selectedSchool;
   StandardModel? _selectedStandard;
-  DivisionModel? _selectedDivision;
   MealSizeModel? _selectedMealSize;
   StateModel? _selectedState;
   CityModel? _selectedCity;
@@ -516,7 +516,7 @@ class _ChildFormState extends State<_ChildForm> {
       _phoneController.text.trim(),
       _selectedSchool?.id ?? '',
       _selectedStandard?.id ?? '',
-      _selectedDivision?.id ?? '',
+      _divisionController.text.trim(),
       _selectedMealSize?.id ?? '',
       _selectedState?.id ?? '',
       _selectedCity?.id ?? '',
@@ -540,7 +540,8 @@ class _ChildFormState extends State<_ChildForm> {
     
     _nameController = TextEditingController(text: widget.child?.name);
     _rollController = TextEditingController(text: widget.child?.rollNumber);
-    _phoneController = TextEditingController(text: widget.child?.phoneNumber);
+    _phoneController = TextEditingController(text: Validators.cleanPhone(widget.child?.phoneNumber));
+    _divisionController = TextEditingController(text: widget.child?.divisionName);
     final backendTime = TimeUtils.tryParseToBackend(widget.child?.mealTime);
     _timeController = TextEditingController(text: backendTime ?? '');
     _timeDisplayController = TextEditingController(text: TimeUtils.formatToDisplay(backendTime));
@@ -555,7 +556,6 @@ class _ChildFormState extends State<_ChildForm> {
       
       SchoolModel? school;
       StandardModel? standard;
-      DivisionModel? division;
       MealSizeModel? mealSize;
       StateModel? state;
       CityModel? city;
@@ -563,7 +563,6 @@ class _ChildFormState extends State<_ChildForm> {
       if (mounted && widget.child != null) {
         school = lookup.schools.where((s) => s.id == widget.child!.schoolId).firstOrNull;
         standard = lookup.standards.where((s) => s.id == widget.child!.standardId).firstOrNull;
-        division = lookup.divisions.where((d) => d.id == widget.child!.divisionId).firstOrNull;
         mealSize = lookup.mealSizes.where((s) => s.id == widget.child!.mealSizeId).firstOrNull;
         
         if (school != null) {
@@ -583,7 +582,6 @@ class _ChildFormState extends State<_ChildForm> {
         setState(() {
           _selectedSchool = school;
           _selectedStandard = standard;
-          _selectedDivision = division;
           _selectedMealSize = mealSize;
           _selectedState = state;
           _selectedCity = city;
@@ -602,6 +600,7 @@ class _ChildFormState extends State<_ChildForm> {
     _phoneController.dispose();
     _timeController.dispose();
     _timeDisplayController.dispose();
+    _divisionController.dispose();
     super.dispose();
   }
 
@@ -703,7 +702,7 @@ class _ChildFormState extends State<_ChildForm> {
           before.phoneNumber?.trim() == _phoneController.text.trim() &&
           before.schoolId == _selectedSchool!.id &&
           before.standardId == _selectedStandard!.id &&
-          before.divisionId == _selectedDivision?.id &&
+          (before.divisionName ?? '').trim() == _divisionController.text.trim() &&
           before.mealSizeId == _selectedMealSize!.id &&
           TimeUtils.normalizeBackendTime(before.mealTime) == TimeUtils.normalizeBackendTime(_timeController.text);
       if (same) {
@@ -751,7 +750,7 @@ class _ChildFormState extends State<_ChildForm> {
       standardId: _selectedStandard!.id,
       mealSizeId: _selectedMealSize!.id,
       mealTime: _timeController.text,
-      divisionId: _selectedDivision?.id,
+      divisionName: _divisionController.text.trim().isEmpty ? null : _divisionController.text.trim(),
     );
 
     bool success;
@@ -855,6 +854,8 @@ class _ChildFormState extends State<_ChildForm> {
               TextFormField(
                 controller: _nameController,
                 autofocus: false,
+                maxLength: 100,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                 decoration: const InputDecoration(
                   labelText: 'Child Name',
                   prefixIcon: Icon(CupertinoIcons.person),
@@ -867,6 +868,12 @@ class _ChildFormState extends State<_ChildForm> {
               TextFormField(
                 controller: _phoneController,
                 autofocus: false,
+                maxLength: 10,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Phone Number',
                   prefixIcon: Icon(CupertinoIcons.phone_fill),
@@ -880,6 +887,8 @@ class _ChildFormState extends State<_ChildForm> {
               TextFormField(
                 controller: _rollController,
                 autofocus: false,
+                maxLength: 20,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                 decoration: const InputDecoration(
                   labelText: 'Roll Number',
                   prefixIcon: Icon(CupertinoIcons.number),
@@ -1017,24 +1026,25 @@ class _ChildFormState extends State<_ChildForm> {
                 },
               ),
               const SizedBox(height: 16),
-              // Division
-              SearchableDropdown<DivisionModel>(
-                label: 'Division (Optional)',
-                items: lookup.divisions,
-                itemLabel: (d) => d.name,
-                value: _selectedDivision,
-                isLoading: lookup.isLoading,
-                listenable: lookup,
-                itemsGetter: () => lookup.divisions,
-                loadingGetter: () => lookup.isLoading,
-                onInteraction: () {
-                  FocusScope.of(context).unfocus();
-                  lookup.fetchChildrenLookups();
-                },
-                onChanged: (v) {
-                  setState(() {
-                    _selectedDivision = v;
-                  });
+              // Division (Optional)
+              TextFormField(
+                controller: _divisionController,
+                autofocus: false,
+                maxLength: 50,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                decoration: const InputDecoration(
+                  labelText: 'Division (Optional)',
+                  prefixIcon: Icon(CupertinoIcons.square_list),
+                ),
+                textInputAction: TextInputAction.next,
+                validator: (v) {
+                  if (v != null && v.trim().length > 50) {
+                    return 'Division must be at most 50 characters.';
+                  }
+                  if (v != null && v.contains(RegExp(r'<[^>]*>'))) {
+                    return 'HTML/script tags are not allowed.';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 16),

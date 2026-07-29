@@ -194,6 +194,7 @@ class ErrorHandler {
       message,
       backgroundColor: Colors.red.shade700,
       icon: Icons.error_outline,
+      positionBottom: true,
     );
   }
 
@@ -205,16 +206,18 @@ class ErrorHandler {
       message,
       backgroundColor: AppTheme.accentColor,
       icon: Icons.error_outline,
+      positionBottom: true,
     );
   }
 
-  /// Shows a success toast.
+  /// Shows a success toast (stays at top).
   static void showSuccess(BuildContext context, String message) {
     _showOverlayToast(
       context,
       message,
       backgroundColor: Colors.green.shade700,
       icon: Icons.check_circle_outline,
+      positionBottom: false,
     );
   }
 
@@ -223,6 +226,7 @@ class ErrorHandler {
     String message, {
     required Color backgroundColor,
     required IconData icon,
+    bool positionBottom = false,
   }) {
     if (!context.mounted) return;
     try {
@@ -241,6 +245,7 @@ class ErrorHandler {
           message: message,
           backgroundColor: backgroundColor,
           icon: icon,
+          positionBottom: positionBottom,
           onDismiss: () {
             try {
               if (_activeEntry == entry) {
@@ -283,12 +288,14 @@ class _OverlayToast extends StatefulWidget {
   final Color backgroundColor;
   final IconData icon;
   final VoidCallback onDismiss;
+  final bool positionBottom;
 
   const _OverlayToast({
     required this.message,
     required this.backgroundColor,
     required this.icon,
     required this.onDismiss,
+    this.positionBottom = false,
   });
 
   @override
@@ -309,7 +316,9 @@ class _OverlayToastState extends State<_OverlayToast> with SingleTickerProviderS
       duration: const Duration(milliseconds: 300),
     );
 
-    _yAnimation = Tween<double>(begin: -80, end: 0).animate(
+    // Top toasts slide down from above; bottom toasts slide up from below
+    final slideBegin = widget.positionBottom ? 80.0 : -80.0;
+    _yAnimation = Tween<double>(begin: slideBegin, end: 0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
 
@@ -319,7 +328,7 @@ class _OverlayToastState extends State<_OverlayToast> with SingleTickerProviderS
 
     _controller.forward();
 
-    _timer = Timer(const Duration(seconds: 4), () {
+    _timer = Timer(const Duration(seconds: 5), () {
       _dismiss();
     });
   }
@@ -342,13 +351,17 @@ class _OverlayToastState extends State<_OverlayToast> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-    final topPadding = mediaQuery.padding.top + 72;
+    // Top toasts: just below status bar + 72px gap
+    // Bottom toasts: just above home indicator + 72px gap (mirrors the top spacing)
+    final topInset    = mediaQuery.padding.top + 72;
+    final bottomInset = mediaQuery.padding.bottom + 72;
 
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         return Positioned(
-          top: topPadding + _yAnimation.value,
+          top:    widget.positionBottom ? null : topInset + _yAnimation.value,
+          bottom: widget.positionBottom ? bottomInset - _yAnimation.value : null,
           left: 16,
           right: 16,
           child: Opacity(

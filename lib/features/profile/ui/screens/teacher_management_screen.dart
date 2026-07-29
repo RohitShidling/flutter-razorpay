@@ -508,7 +508,7 @@ class _TeacherFormState extends State<_TeacherForm> {
     super.initState();
 
     _nameController = TextEditingController(text: widget.profile?.name);
-    _phoneController = TextEditingController(text: widget.profile?.phoneNumber);
+    _phoneController = TextEditingController(text: Validators.cleanPhone(widget.profile?.phoneNumber));
     _schoolController = TextEditingController(text: widget.profile?.schoolCollegeName);
     _cityController = TextEditingController(text: widget.profile?.city);
     _stateController = TextEditingController(text: widget.profile?.state);
@@ -788,6 +788,8 @@ class _TeacherFormState extends State<_TeacherForm> {
 
                   TextFormField(
                     controller: _nameController,
+                    maxLength: 100,
+                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                     decoration: const InputDecoration(
                       labelText: 'Full Name',
                       prefixIcon: Icon(CupertinoIcons.person_fill),
@@ -799,6 +801,12 @@ class _TeacherFormState extends State<_TeacherForm> {
 
                   TextFormField(
                     controller: _phoneController,
+                    maxLength: 10,
+                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
                     decoration: const InputDecoration(
                       labelText: 'Phone Number',
                       prefixIcon: Icon(CupertinoIcons.phone_fill),

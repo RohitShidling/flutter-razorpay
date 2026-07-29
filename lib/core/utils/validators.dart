@@ -56,10 +56,28 @@ class Validators {
     if (value == null || value.trim().isEmpty) {
       return 'Phone Number is required';
     }
-    final trimmed = value.trim();
-    if (!RegExp(r'^[0-9]{10}$').hasMatch(trimmed)) {
+    String clean = value.trim().replaceAll(RegExp(r'\s+'), '');
+    if (clean.startsWith('+91')) {
+      clean = clean.substring(3);
+    } else if (clean.startsWith('91') && clean.length == 12) {
+      clean = clean.substring(2);
+    }
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(clean)) {
       return 'Enter a valid 10-digit phone number';
     }
     return null;
   }
+
+  /// Strips country code (+91 or 91) from phone number to leave exactly 10 digits.
+  static String cleanPhone(String? phone) {
+    if (phone == null) return '';
+    String clean = phone.trim().replaceAll(RegExp(r'\s+'), '');
+    if (clean.startsWith('+91')) {
+      clean = clean.substring(3);
+    } else if (clean.startsWith('91') && clean.length == 12) {
+      clean = clean.substring(2);
+    }
+    return clean;
+  }
 }
+

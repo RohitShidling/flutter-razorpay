@@ -298,7 +298,7 @@ class _ProfessionalManagementScreenState extends State<ProfessionalManagementScr
                   ],
                   _buildInfoRow(CupertinoIcons.building_2_fill, profile.companyName, isDark),
                   const SizedBox(height: 10),
-                  _buildInfoRow(CupertinoIcons.location_solid, '${profile.city}, ${profile.state}', isDark),
+                  _buildInfoRow(CupertinoIcons.location_solid, '${profile.city}, ${profile.state}${profile.pincode != null && profile.pincode!.isNotEmpty ? ' - ${profile.pincode}' : ''}', isDark),
                   const SizedBox(height: 10),
                   _buildInfoRow(CupertinoIcons.clock_fill, 'Lunch Time: ${TimeUtils.formatToDisplay(profile.lunchTime)}', isDark),
                   const SizedBox(height: 10),
@@ -407,6 +407,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
   late TextEditingController _phoneController;
   late TextEditingController _timeController;
   late TextEditingController _timeDisplayController;
+  late TextEditingController _pincodeController;
   late String _initialSnapshot;
 
   CorporateLocationModel? _selectedCorporateLocation;
@@ -444,6 +445,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
     return [
       _nameController.text.trim(),
       _phoneController.text.trim(),
+      _pincodeController.text.trim(),
       _selectedCorporateLocation?.id ?? '',
       _selectedMealSize?.id ?? '',
       _selectedState?.id ?? '',
@@ -463,10 +465,11 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
     super.initState();
 
     _nameController = TextEditingController(text: widget.profile?.name);
-    _phoneController = TextEditingController(text: widget.profile?.phoneNumber);
+    _phoneController = TextEditingController(text: Validators.cleanPhone(widget.profile?.phoneNumber));
     final backendTime = TimeUtils.tryParseToBackend(widget.profile?.lunchTime);
     _timeController = TextEditingController(text: backendTime ?? '');
     _timeDisplayController = TextEditingController(text: TimeUtils.formatToDisplay(_timeController.text));
+    _pincodeController = TextEditingController();
     _initialSnapshot = '';
     _isLoading = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -505,6 +508,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
           _selectedState = state;
           _selectedCity = city;
           _selectedMealSize = mealSize;
+          _pincodeController.text = corpLoc?.pincode ?? widget.profile?.pincode ?? '';
           _corporateLocksLocation = corpLoc != null;
           _isLoading = false;
         });
@@ -519,6 +523,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
     _phoneController.dispose();
     _timeController.dispose();
     _timeDisplayController.dispose();
+    _pincodeController.dispose();
     super.dispose();
   }
 
@@ -728,6 +733,8 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
 
                   TextFormField(
                     controller: _nameController,
+                    maxLength: 100,
+                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                     decoration: const InputDecoration(
                       labelText: 'Full Name',
                       prefixIcon: Icon(CupertinoIcons.person_fill),
@@ -739,6 +746,12 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
 
                   TextFormField(
                     controller: _phoneController,
+                    maxLength: 10,
+                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
                     decoration: const InputDecoration(
                       labelText: 'Phone Number',
                       prefixIcon: Icon(CupertinoIcons.phone_fill),
@@ -766,6 +779,7 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
                     onChanged: (v) {
                       setState(() {
                         _selectedCorporateLocation = v;
+                        _pincodeController.text = v?.pincode ?? '';
                         if (v != null) {
                           _corporateLocksLocation = true;
                           _selectedState = lookup.states.where((s) => s.name.toLowerCase() == v.state.toLowerCase()).firstOrNull;
@@ -812,6 +826,17 @@ class _ProfessionalFormState extends State<_ProfessionalForm> {
                       textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                   ),
+                  if (_selectedCorporateLocation != null) ...[
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _pincodeController,
+                      enabled: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Pincode / Zip Code',
+                        prefixIcon: Icon(CupertinoIcons.location_solid),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
 
                   SearchableDropdown<StateModel>(
