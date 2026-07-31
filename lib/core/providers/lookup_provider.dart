@@ -134,7 +134,7 @@ class LookupProvider with ChangeNotifier {
       await _loadFromCache();
       return;
     }
-    final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 60;
+    final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 5;
     if (!force && isFresh) return;
     if (_inflightInitialRequest != null) return _inflightInitialRequest;
     if (_isLoading) return;
@@ -149,8 +149,11 @@ class LookupProvider with ChangeNotifier {
   }
 
   Future<void> _doFetchInitialData() async {
-    _isLoading = true;
-    notifyListeners();
+    final isSilent = _schools.isNotEmpty;
+    if (!isSilent) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     try {
       final results = await Future.wait([
@@ -189,7 +192,16 @@ class LookupProvider with ChangeNotifier {
   }
 
   Future<void> fetchMealSizesOnly({bool force = false}) async {
-    if (!force && _mealSizes.isNotEmpty) return;
+    if (!force && _mealSizes.isNotEmpty) {
+      // Silent background fetch to get updates immediately
+      _repository.getMealSizes().then((sizes) {
+        if (sizes.isNotEmpty) {
+          _mealSizes = sizes;
+          notifyListeners();
+        }
+      }).catchError((_) {});
+      return;
+    }
     try {
       _mealSizes = await _repository.getMealSizes();
       notifyListeners();
@@ -201,7 +213,7 @@ class LookupProvider with ChangeNotifier {
       await _loadFromCache();
       return;
     }
-    final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 60;
+    final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 5;
     if (!force && isFresh) return;
 
     try {
