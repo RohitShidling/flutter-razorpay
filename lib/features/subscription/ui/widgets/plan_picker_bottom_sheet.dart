@@ -411,7 +411,7 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
-                    'TRIAL',
+                    'WEEKLY PLAN',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w900,

@@ -5,6 +5,7 @@ import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
+import 'package:meal_app/features/bulk_order/data/models/bulk_delivery_address.dart';
 import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_section.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
@@ -61,6 +62,7 @@ class QuickServiceCheckout {
     int quantity = 1,
     int? mealSizeId,
     String? deliveryTime,
+    String? customerName,
     bool skipAddressPrompt = false,
   }) async {
     if (!skipAddressPrompt) {
@@ -77,7 +79,7 @@ class QuickServiceCheckout {
     }
 
     String resolvedDeliveryTime = deliveryTime ?? '';
-    if (resolvedDeliveryTime.isEmpty) {
+    if (resolvedDeliveryTime.isEmpty && !skipAddressPrompt) {
       resolvedDeliveryTime = bulk.deliveryAddress?.deliveryTime ?? '';
     }
 
@@ -97,6 +99,7 @@ class QuickServiceCheckout {
         quantity: quantity,
         mealSizeId: resolvedMealSizeId,
         deliveryTime: resolvedDeliveryTime,
+        customerName: customerName,
       );
       return;
     }
@@ -130,6 +133,7 @@ class QuickServiceCheckout {
       quantity: quantity,
       mealSizeId: resolvedMealSizeId,
       deliveryTime: finalDeliveryTime,
+      customerName: customerName,
     );
   }
 
@@ -139,10 +143,32 @@ class QuickServiceCheckout {
     required int quantity,
     required int mealSizeId,
     required String deliveryTime,
+    String? customerName,
   }) async {
     final bulk = context.read<BulkOrderProvider>();
     final provider = context.read<QuickServiceProvider>();
-    provider.setAddress(bulk.deliveryAddress);
+    
+    final addr = bulk.deliveryAddress;
+    if (addr != null && customerName != null && customerName.isNotEmpty) {
+      final updatedAddr = BulkDeliveryAddress(
+        id: addr.id,
+        label: addr.label,
+        stateId: addr.stateId,
+        cityId: addr.cityId,
+        addressLine: addr.addressLine,
+        pincode: addr.pincode,
+        stateName: addr.stateName,
+        cityName: addr.cityName,
+        isDefault: addr.isDefault,
+        deliveryTime: addr.deliveryTime,
+        phoneNumber: addr.phoneNumber,
+        altPhoneNumber: addr.altPhoneNumber,
+        customerName: customerName,
+      );
+      provider.setAddress(updatedAddr);
+    } else {
+      provider.setAddress(addr);
+    }
 
     final result = await provider.payOneDayLunch(
       deliveryType: deliveryType,
@@ -472,6 +498,7 @@ class _OneDayLunchSheetState extends State<_OneDayLunchSheet> {
               BulkOrderAddressSection(
                 showDeliveryTime: true,
                 deliveryTimeController: _timeController,
+                autoPopulateDeliveryTime: false,
               ),
               const SizedBox(height: 16),
               SizedBox(

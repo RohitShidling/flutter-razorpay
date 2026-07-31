@@ -11,6 +11,7 @@ class BulkDeliveryAddress {
   final String? deliveryTime;
   final String? phoneNumber;
   final String? altPhoneNumber;
+  final String? customerName;
 
   const BulkDeliveryAddress({
     this.id,
@@ -25,6 +26,7 @@ class BulkDeliveryAddress {
     this.deliveryTime,
     this.phoneNumber,
     this.altPhoneNumber,
+    this.customerName,
   });
 
   Map<String, dynamic> toApiPayload() => {
@@ -42,6 +44,9 @@ class BulkDeliveryAddress {
             : null,
         'altPhoneNumber': (altPhoneNumber != null && altPhoneNumber!.trim().isNotEmpty)
             ? altPhoneNumber!.trim()
+            : null,
+        'customerName': (customerName != null && customerName!.trim().isNotEmpty)
+            ? customerName!.trim()
             : null,
       };
 
@@ -74,6 +79,7 @@ class BulkDeliveryAddress {
         'deliveryTime': deliveryTime,
         'phoneNumber': phoneNumber,
         'altPhoneNumber': altPhoneNumber,
+        'customerName': customerName,
       };
 
   factory BulkDeliveryAddress.fromJson(Map<String, dynamic> json) {
@@ -102,6 +108,8 @@ class BulkDeliveryAddress {
           json['phone_number']?.toString(),
       altPhoneNumber: json['altPhoneNumber']?.toString() ??
           json['alt_phone_number']?.toString(),
+      customerName: json['customerName']?.toString() ??
+          json['customer_name']?.toString(),
     );
   }
 }

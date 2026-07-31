@@ -117,6 +117,7 @@ class PaymentProvider with ChangeNotifier {
         'items': _paymentHistory,
         'total': _historyTotal,
       });
+      _error = null;
     } catch (e) {
       // Keep showing cached history in offline mode; only show hard error if nothing cached.
       _error = hasCachedData ? null : ErrorHandler.getErrorMessage(e);
@@ -175,6 +176,7 @@ class PaymentProvider with ChangeNotifier {
       _activeSubscriptions = await _repository.getActiveSubscriptions();
       _lastActiveSubFetchedAt = DateTime.now();
       await _cache.saveJson(_activeCacheKey, {'items': _activeSubscriptions});
+      _error = null;
     } catch (e) {
       // Keep showing cached plans in offline mode; only show hard error if nothing cached.
       _error = hasCachedData ? null : ErrorHandler.getErrorMessage(e);
@@ -295,6 +297,7 @@ class PaymentProvider with ChangeNotifier {
       final data = await _repository.getWallet();
       _walletBalance = data['balance']?.toString();
       _lastWalletFetchedAt = DateTime.now();
+      _error = null;
     } catch (e) {
       if (!silent) _error = ErrorHandler.getErrorMessage(e);
     } finally {
@@ -314,6 +317,7 @@ class PaymentProvider with ChangeNotifier {
 
     try {
       _walletTransactions = List<dynamic>.from(await _repository.getWalletTransactions());
+      _error = null;
     } catch (e) {
       if (!silent) _error = ErrorHandler.getErrorMessage(e);
     } finally {
