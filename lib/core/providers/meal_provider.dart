@@ -157,6 +157,7 @@ class MealProvider with ChangeNotifier {
       } else {
         _todayMenu = null;
       }
+      _error = null;
     } catch (e) {
       if (e.toString().contains('403')) {
         _isSubscribed = false;
@@ -190,6 +191,7 @@ class MealProvider with ChangeNotifier {
       _mealStatus = await _repository.fetchMealStatus();
       _lastMealStatusFetchedAt = DateTime.now();
       await CacheStore.setJson('meal_status', _mealStatus, ttl: const Duration(hours: 6));
+      _error = null;
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
     } finally {
@@ -258,6 +260,7 @@ class MealProvider with ChangeNotifier {
       _skips = await _repository.fetchMealSkips();
       _lastSkipsFetchedAt = DateTime.now();
       await _cache.saveJson(_skipHistoryCacheKey, {'items': _skips});
+      _error = null;
       notifyListeners();
     } catch (e) {
       // If cached skips are present, keep showing them offline without erroring out.
@@ -281,6 +284,7 @@ class MealProvider with ChangeNotifier {
         _skipPolicy = data;
         _lastSkipPolicyFetchedAt = DateTime.now();
         await _cache.saveJson(_skipPolicyCacheKey, data);
+        _error = null;
         notifyListeners();
       }
     } catch (e) {

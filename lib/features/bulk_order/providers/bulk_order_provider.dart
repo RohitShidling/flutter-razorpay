@@ -341,6 +341,7 @@ class BulkOrderProvider with ChangeNotifier {
                 deliveryTime: addr.deliveryTime,
                 phoneNumber: addr.phoneNumber,
                 altPhoneNumber: addr.altPhoneNumber,
+                customerName: addr.customerName,
               ))
           .toList();
       await BulkAddressStorage.save(selected);
@@ -530,15 +531,18 @@ class BulkOrderProvider with ChangeNotifier {
     if (addr is Map) {
       try {
         _deliveryAddress = BulkDeliveryAddress(
+          id: addr['id'] is int ? addr['id'] as int : int.tryParse('${addr['id'] ?? addr['saved_address_id']}'),
+          label: addr['label']?.toString() ?? '',
           stateId: int.tryParse('${addr['stateId'] ?? addr['state_id']}') ?? 0,
           cityId: int.tryParse('${addr['cityId'] ?? addr['city_id']}') ?? 0,
-          addressLine: addr['address']?.toString() ?? addr['addressLine']?.toString() ?? '',
+          addressLine: addr['address']?.toString() ?? addr['addressLine']?.toString() ?? addr['address_line']?.toString() ?? '',
           pincode: addr['pincode']?.toString(),
-          stateName: addr['stateName']?.toString(),
-          cityName: addr['cityName']?.toString(),
-          deliveryTime: addr['deliveryTime']?.toString(),
+          stateName: addr['stateName']?.toString() ?? addr['state_name']?.toString(),
+          cityName: addr['cityName']?.toString() ?? addr['city_name']?.toString(),
+          deliveryTime: addr['deliveryTime']?.toString() ?? addr['delivery_time']?.toString(),
           phoneNumber: addr['phoneNumber']?.toString() ?? addr['phone_number']?.toString(),
           altPhoneNumber: addr['altPhoneNumber']?.toString() ?? addr['alt_phone_number']?.toString(),
+          customerName: addr['customerName']?.toString() ?? addr['customer_name']?.toString(),
         );
       } catch (_) {}
     }

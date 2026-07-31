@@ -126,15 +126,19 @@ class _BulkOrderPaymentSheetState extends State<BulkOrderPaymentSheet> {
     if (addr == null || _deliveryTime == null) return;
     provider.setDeliveryAddress(
       BulkDeliveryAddress(
+        id: addr.id,
+        label: addr.label,
         stateId: addr.stateId,
         cityId: addr.cityId,
         addressLine: addr.addressLine,
         pincode: addr.pincode,
         stateName: addr.stateName,
         cityName: addr.cityName,
+        isDefault: addr.isDefault,
         deliveryTime: TimeUtils.toBackendFormat(_deliveryTime!),
         phoneNumber: addr.phoneNumber,
         altPhoneNumber: addr.altPhoneNumber,
+        customerName: addr.customerName,
       ),
     );
   }
@@ -179,6 +183,28 @@ class _BulkOrderPaymentSheetState extends State<BulkOrderPaymentSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<BulkOrderProvider>();
+    final addr = provider.deliveryAddress;
+    if (addr?.deliveryTime != null && _deliveryTime == null) {
+      final parsed = TimeUtils.tryParseToBackend(addr!.deliveryTime!);
+      if (parsed != null) {
+        final parts = parsed.split(':');
+        if (parts.length >= 2) {
+          final time = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 13,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _deliveryTime == null) {
+              setState(() {
+                _deliveryTime = time;
+              });
+            }
+          });
+        }
+      }
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
 

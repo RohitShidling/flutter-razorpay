@@ -20,10 +20,12 @@ class BulkOrderAddressSection extends StatefulWidget {
     super.key,
     this.showDeliveryTime = false,
     this.deliveryTimeController,
+    this.autoPopulateDeliveryTime = true,
   });
 
   final bool showDeliveryTime;
   final TextEditingController? deliveryTimeController;
+  final bool autoPopulateDeliveryTime;
 
   @override
   State<BulkOrderAddressSection> createState() =>
@@ -133,6 +135,17 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
     final selected = bulk.deliveryAddress;
     final atLimit = addresses.length >= bulk.savedAddressLimit;
 
+    if (widget.showDeliveryTime && widget.autoPopulateDeliveryTime && selected != null && selected.deliveryTime != null) {
+      final savedTime = selected.deliveryTime!.trim();
+      if (savedTime.isNotEmpty && _deliveryTimeController.text.trim() != savedTime) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _deliveryTimeController.text.trim() != savedTime) {
+            _deliveryTimeController.text = savedTime;
+          }
+        });
+      }
+    }
+
     return AppleCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -225,6 +238,7 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
                       : _deliveryTimeController.text.trim(),
                   phoneNumber: selected.phoneNumber,
                   altPhoneNumber: selected.altPhoneNumber,
+                  customerName: selected.customerName,
                 );
                 context.read<BulkOrderProvider>().setDeliveryAddress(updated);
               },
@@ -263,11 +277,15 @@ class _AddressCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.surfaceDark : Colors.white,
+          color: isSelected
+              ? (isDark ? AppTheme.primaryColor.withValues(alpha: 0.1) : AppTheme.primaryColor.withValues(alpha: 0.03))
+              : (isDark ? AppTheme.surfaceDark : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.grey.withValues(alpha: isDark ? 0.2 : 0.15),
-            width: 1,
+            color: isSelected
+                ? AppTheme.primaryColor
+                : Colors.grey.withValues(alpha: isDark ? 0.2 : 0.15),
+            width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
@@ -285,7 +303,9 @@ class _AddressCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFFAF8F5),
+                  color: isSelected
+                      ? AppTheme.primaryColor.withValues(alpha: isDark ? 0.15 : 0.08)
+                      : (isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFFAF8F5)),
                 ),
                 child: Row(
                   children: [
@@ -381,6 +401,14 @@ class _AddressCard extends StatelessWidget {
                   children: [
                     const Divider(height: 1),
                     const SizedBox(height: 12),
+                    if (address.customerName?.isNotEmpty == true) ...[
+                      _InfoRow(
+                        icon: CupertinoIcons.person_fill,
+                        text: address.customerName!,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     _InfoRow(
                       icon: CupertinoIcons.house_fill,
                       text: address.addressLine,
@@ -559,6 +587,7 @@ class _AddressFormSheet extends StatefulWidget {
 }
 
 class _AddressFormSheetState extends State<_AddressFormSheet> {
+  final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -567,7 +596,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
   CityModel? _selectedCity;
   AllowedAddressModel? _selectedAllowedAddress;
   StandardModel? _selectedStandard;
-  DivisionModel? _selectedDivision;
+  final _divisionController = TextEditingController();
   bool _saving = false;
   String? _formError;
 
@@ -578,6 +607,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     super.initState();
     final existing = widget.existingAddress;
     if (existing != null) {
+      _nameController.text = existing.customerName ?? '';
       _addressController.text = existing.addressLine;
       _pincodeController.text = existing.pincode ?? '';
       _phoneController.text = existing.phoneNumber ?? '';
@@ -633,9 +663,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                   .firstOrNull;
             }
             if (parsedDiv != null) {
-              _selectedDivision = lookup.divisions
-                  .where((d) => d.name.trim().toLowerCase() == parsedDiv!.toLowerCase())
-                  .firstOrNull;
+              _divisionController.text = parsedDiv;
             }
           }
         });
@@ -646,10 +674,12 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _addressController.dispose();
     _pincodeController.dispose();
     _phoneController.dispose();
     _altPhoneController.dispose();
+    _divisionController.dispose();
     super.dispose();
   }
 
@@ -695,8 +725,9 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     String line = allowedAddress.addressLine;
     if (isSchoolSelected && _selectedStandard != null) {
       line += ", Standard: ${_selectedStandard!.displayName}";
-      if (_selectedDivision != null) {
-        line += ", Div: ${_selectedDivision!.name}";
+      final div = _divisionController.text.trim();
+      if (div.isNotEmpty) {
+        line += ", Div: $div";
       }
     }
 
@@ -724,6 +755,12 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
       return;
     }
 
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _formError = 'Name is required.');
+      return;
+    }
+
     setState(() {
       _saving = true;
       _formError = null;
@@ -744,6 +781,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
           : widget.deliveryTimeController.text.trim(),
       phoneNumber: phone.isNotEmpty ? phone : null,
       altPhoneNumber: altPhone.isNotEmpty ? altPhone : null,
+      customerName: name,
     );
 
     final provider = context.read<BulkOrderProvider>();
@@ -824,10 +862,24 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
             // form
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const SizedBox(height: 4),
+                    // Name
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Recipient Name *',
+                        hintText: 'Enter recipient name',
+                        prefixIcon: Icon(CupertinoIcons.person_solid),
+                      ),
+                      onChanged: (_) {
+                        setState(() => _formError = null);
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     // State
                     SearchableDropdown<StateModel>(
                       label: 'State',
@@ -919,7 +971,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                         setState(() {
                           _selectedAllowedAddress = v;
                           _selectedStandard = null;
-                          _selectedDivision = null;
+                          _divisionController.clear();
                           _formError = null;
                           if (v != null) {
                             _addressController.text = v.addressLine;
@@ -962,23 +1014,17 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                             },
                           ),
                           const SizedBox(height: 16),
-                          SearchableDropdown<DivisionModel>(
-                            label: 'Division',
-                            items: lookup.divisions,
-                            itemLabel: (d) => d.name,
-                            value: _selectedDivision,
-                            isLoading: lookup.isLoading,
-                            listenable: lookup,
-                            itemsGetter: () => lookup.divisions,
-                            loadingGetter: () => lookup.isLoading,
-                            onInteraction: () {
-                              FocusScope.of(context).unfocus();
-                            },
-                            onChanged: (v) {
-                              setState(() {
-                                _selectedDivision = v;
-                                _formError = null;
-                              });
+                          TextField(
+                            controller: _divisionController,
+                            maxLength: 50,
+                            decoration: const InputDecoration(
+                              labelText: 'Division (Optional)',
+                              counterText: '',
+                              hintText: 'Enter division (e.g. A, B)',
+                              prefixIcon: Icon(CupertinoIcons.square_list),
+                            ),
+                            onChanged: (_) {
+                              setState(() => _formError = null);
                             },
                           ),
                         ],

@@ -115,6 +115,7 @@ class QuickServiceProvider with ChangeNotifier {
       final data = await _repository.getSavedDeliveryAddress();
       if (data == null) return null;
       final address = BulkDeliveryAddress(
+        id: data['id'] is int ? data['id'] as int : int.tryParse('${data['id']}'),
         stateId: int.tryParse('${data['state_id'] ?? data['stateId']}') ?? 0,
         cityId: int.tryParse('${data['city_id'] ?? data['cityId']}') ?? 0,
         addressLine: data['address_line']?.toString() ?? data['addressLine']?.toString() ?? '',
@@ -124,6 +125,7 @@ class QuickServiceProvider with ChangeNotifier {
         deliveryTime: data['delivery_time']?.toString() ?? data['deliveryTime']?.toString(),
         phoneNumber: data['phone_number']?.toString() ?? data['phoneNumber']?.toString(),
         altPhoneNumber: data['alt_phone_number']?.toString() ?? data['altPhoneNumber']?.toString(),
+        customerName: data['customer_name']?.toString() ?? data['customerName']?.toString(),
       );
       if (address.isComplete) {
         _address = address;
@@ -377,6 +379,7 @@ class QuickServiceProvider with ChangeNotifier {
       if (a.deliveryTime != null && a.deliveryTime!.trim().isNotEmpty) 'delivery_time': a.deliveryTime!.trim(),
       if (a.phoneNumber != null) 'phone_number': a.phoneNumber,
       if (a.altPhoneNumber != null) 'alt_phone_number': a.altPhoneNumber,
+      if (a.customerName != null && a.customerName!.trim().isNotEmpty) 'customer_name': a.customerName!.trim(),
     };
   }
 

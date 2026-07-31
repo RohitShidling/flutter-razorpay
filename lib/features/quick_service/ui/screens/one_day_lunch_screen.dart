@@ -11,6 +11,7 @@ import 'package:meal_app/features/quick_service/ui/widgets/quick_service_checkou
 import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/utils/time_utils.dart';
 import 'package:meal_app/core/widgets/responsive_layout.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -42,13 +43,6 @@ bool _isTodaySunday() => DateTime.now().weekday == DateTime.sunday;
 bool _isTomorrowSunday() =>
     DateTime.now().add(const Duration(days: 1)).weekday == DateTime.sunday;
 
-/// Returns true when the menu map has non-blank item text.
-bool _hasMenuItems(Map<String, dynamic>? menu) {
-  if (menu == null) return false;
-  final items = menu['items']?.toString().trim() ?? '';
-  final name = menu['name']?.toString().trim() ?? '';
-  return items.isNotEmpty || name.isNotEmpty;
-}
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -66,9 +60,8 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
   int _quantity = 1;
   int? _selectedMealSizeId;
   bool _isScreenLoading = true;
+  final _timeController = TextEditingController();
 
-  /// Weekly menu fetched from the public (un-gated) endpoint.
-  /// Stored locally so we don't depend on subscription-gated MenuProvider.
   List<dynamic> _weeklyMenuLocal = [];
 
   @override
@@ -79,6 +72,12 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
     // - Otherwise default to 'next_day'
     _deliveryType = _isTomorrowSunday() ? 'today' : 'next_day';
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+  }
+
+  @override
+  void dispose() {
+    _timeController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -175,11 +174,23 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
   }
 
   Future<void> _pay() async {
+    final addr = context.read<BulkOrderProvider>().deliveryAddress;
+    if (addr == null) {
+      ErrorHandler.showError(context, 'Please select or add a delivery address first.');
+      return;
+    }
+    final name = addr.customerName?.trim() ?? '';
+    if (name.isEmpty) {
+      ErrorHandler.showError(context, 'Selected address is missing a recipient name. Please edit the address to add a name.');
+      return;
+    }
     await QuickServiceCheckout.payOneDayLunch(
       context,
       deliveryType: _deliveryType,
       quantity: _quantity,
       mealSizeId: _selectedMealSizeId,
+      deliveryTime: _timeController.text.trim(),
+      customerName: name,
       skipAddressPrompt: true,
     );
   }
@@ -274,6 +285,7 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
                 onQuantityChanged: (v) => setState(() => _quantity = v),
                 onMealSizeChanged: (id) => setState(() => _selectedMealSizeId = id),
                 onPay: _pay,
+                deliveryTimeController: _timeController,
               ),
             );
           },
@@ -302,6 +314,7 @@ class _OneDayLunchBody extends StatelessWidget {
     required this.onQuantityChanged,
     required this.onMealSizeChanged,
     required this.onPay,
+    required this.deliveryTimeController,
   });
 
   final Map<String, dynamic> cfg;
@@ -316,6 +329,7 @@ class _OneDayLunchBody extends StatelessWidget {
   final ValueChanged<int> onQuantityChanged;
   final ValueChanged<int> onMealSizeChanged;
   final VoidCallback onPay;
+  final TextEditingController deliveryTimeController;
 
   @override
   Widget build(BuildContext context) {
@@ -365,8 +379,7 @@ class _OneDayLunchBody extends StatelessWidget {
     final selectedDaySunday =
         (deliveryType == 'today' && todaySunday) ||
         (deliveryType == 'next_day' && tomorrowSunday);
-    final menuAvailable = _hasMenuItems(activeMenu);
-    final canPay = !isLoading && menuAvailable && !selectedDaySunday;
+    final canPay = !isLoading && !selectedDaySunday;
 
     return CustomScrollView(
       slivers: [
@@ -469,8 +482,13 @@ class _OneDayLunchBody extends StatelessWidget {
                 );
               }(),
 
+
               // ── Delivery address — single const widget, stays alive ───
-              const BulkOrderAddressSection(showDeliveryTime: true),
+              BulkOrderAddressSection(
+                showDeliveryTime: true,
+                autoPopulateDeliveryTime: false,
+                deliveryTimeController: deliveryTimeController,
+              ),
               const SizedBox(height: 20),
 
               // ── Total ─────────────────────────────────────────────────
@@ -511,7 +529,7 @@ class _OneDayLunchBody extends StatelessWidget {
                       : Text(
                           selectedDaySunday
                               ? 'No Delivery on Sunday'
-                              : (!menuAvailable ? 'Menu Not Available' : 'Pay & Order'),
+                              : 'Pay & Order',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                         ),
                 ),

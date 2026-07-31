@@ -468,6 +468,26 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         final mealSizeName = _safeString(payment['meal_size_name'], '');
         final mealTimingRaw = _safeString(payment['meal_timing'], '');
         final isSuccess = pStatus == 'COMPLETED' || pStatus == 'SUCCESS';
+        final phone = _safeString(payment['phone_number'], '');
+        final altPhone = _safeString(payment['alt_phone_number'], '');
+        final addressLine = _safeString(payment['address_line'], '');
+        final pincode = _safeString(payment['pincode'], '');
+        final cityName = _safeString(payment['city_name'], '');
+        final stateName = _safeString(payment['state_name'], '');
+        final deliveryCustomerName = _safeString(payment['customer_name'], '');
+        final deliveryTime = _safeString(payment['delivery_time'], '');
+        final deliveryDate = _safeString(payment['delivery_date'], '');
+        final quantity = payment['quantity'] ?? 1;
+
+        String? formattedDeliveryDate;
+        if (deliveryDate.isNotEmpty) {
+          try {
+            final parsedDate = DateTime.parse(deliveryDate);
+            formattedDeliveryDate = DateFormat('dd MMM yyyy').format(parsedDate);
+          } catch (_) {
+            formattedDeliveryDate = deliveryDate;
+          }
+        }
 
         String fallbackEntityName = 'System / Referral';
         if (orderType == 'bulk') {
@@ -673,6 +693,54 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ],
+              if (addressLine.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFAF9F6),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            CupertinoIcons.location_solid,
+                            size: 14,
+                            color: AppTheme.primaryColor.withValues(alpha: 0.8),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Delivery Details',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white70 : AppTheme.textPrimaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (formattedDeliveryDate != null)
+                        _buildMetaRow('Delivery Date', formattedDeliveryDate, isDark),
+                      if (orderType == 'one_day_lunch' || orderType == 'special_dish' || orderType == 'bulk')
+                        _buildMetaRow('Quantity', '$quantity', isDark),
+                      if (deliveryCustomerName.isNotEmpty)
+                        _buildMetaRow('Recipient', deliveryCustomerName, isDark),
+                      if (phone.isNotEmpty)
+                        _buildMetaRow('Phone', altPhone.isNotEmpty ? '$phone / $altPhone' : phone, isDark),
+                      if (deliveryTime.isNotEmpty)
+                        _buildMetaRow('Timing', TimeUtils.formatToDisplay(deliveryTime), isDark),
+                      _buildMetaRow('Address', '$addressLine, $cityName, $stateName - $pincode', isDark),
                     ],
                   ),
                 ),
