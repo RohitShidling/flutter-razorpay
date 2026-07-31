@@ -44,6 +44,7 @@ class NetworkStatusService with ChangeNotifier {
   bool _refreshInFlight = false;
   DateTime? _lastHealthCheckTime;
   bool _lastHealthResult = false;
+  int _consecutiveFailures = 0;
 
   final List<VoidCallback> _becameOnlineListeners = [];
   final List<VoidCallback> _onQueueReplayedListeners = [];
@@ -127,10 +128,20 @@ class NetworkStatusService with ChangeNotifier {
       final hasDevice = await _checkDeviceConnectivity();
       final healthOk = hasDevice ? await _checkBackendHealth() : false;
 
+      if (healthOk) {
+        _consecutiveFailures = 0;
+      } else {
+        if (hasDevice) {
+          _consecutiveFailures++;
+        } else {
+          _consecutiveFailures = 3;
+        }
+      }
+
       final prevDevice = _hasDeviceConnectivity;
       final prevReachable = _isBackendReachable;
       _hasDeviceConnectivity = hasDevice;
-      _isBackendReachable = healthOk;
+      _isBackendReachable = _consecutiveFailures < 3;
 
       if (prevDevice != _hasDeviceConnectivity || prevReachable != _isBackendReachable) {
         notifyListeners();
@@ -172,9 +183,9 @@ class NetworkStatusService with ChangeNotifier {
   }
 
   Future<bool> _checkBackendHealth() async {
-    if (_lastHealthCheckTime != null &&
+    if (_lastHealthResult && _lastHealthCheckTime != null &&
         DateTime.now().difference(_lastHealthCheckTime!).inSeconds < 30) {
-      return _lastHealthResult;
+      return true;
     }
     _lastHealthCheckTime = DateTime.now();
     try {

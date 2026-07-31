@@ -119,8 +119,31 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
       provider.setDeliveryAddress(address);
     }
     if (widget.showDeliveryTime) {
-      if (address.deliveryTime != null && address.deliveryTime!.trim().isNotEmpty) {
-        _deliveryTimeController.text = address.deliveryTime!.trim();
+      if (widget.autoPopulateDeliveryTime) {
+        if (address.deliveryTime != null && address.deliveryTime!.trim().isNotEmpty) {
+          _deliveryTimeController.text = address.deliveryTime!.trim();
+        }
+      } else {
+        _deliveryTimeController.clear();
+        final selected = provider.deliveryAddress;
+        if (selected != null) {
+          final updated = BulkDeliveryAddress(
+            id: selected.id,
+            label: selected.label,
+            stateId: selected.stateId,
+            cityId: selected.cityId,
+            addressLine: selected.addressLine,
+            pincode: selected.pincode,
+            stateName: selected.stateName,
+            cityName: selected.cityName,
+            isDefault: selected.isDefault,
+            deliveryTime: null,
+            phoneNumber: selected.phoneNumber,
+            altPhoneNumber: selected.altPhoneNumber,
+            customerName: selected.customerName,
+          );
+          provider.setDeliveryAddress(updated);
+        }
       }
     }
   }

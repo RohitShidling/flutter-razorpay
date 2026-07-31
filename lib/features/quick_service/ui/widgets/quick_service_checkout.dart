@@ -606,6 +606,28 @@ class _AddressSheetState extends State<_AddressSheet> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final bulk = context.read<BulkOrderProvider>();
+      if (bulk.deliveryAddress != null) {
+        final updated = BulkDeliveryAddress(
+          id: bulk.deliveryAddress!.id,
+          label: bulk.deliveryAddress!.label,
+          stateId: bulk.deliveryAddress!.stateId,
+          cityId: bulk.deliveryAddress!.cityId,
+          addressLine: bulk.deliveryAddress!.addressLine,
+          pincode: bulk.deliveryAddress!.pincode,
+          stateName: bulk.deliveryAddress!.stateName,
+          cityName: bulk.deliveryAddress!.cityName,
+          isDefault: bulk.deliveryAddress!.isDefault,
+          deliveryTime: null,
+          phoneNumber: bulk.deliveryAddress!.phoneNumber,
+          altPhoneNumber: bulk.deliveryAddress!.altPhoneNumber,
+          customerName: bulk.deliveryAddress!.customerName,
+        );
+        bulk.setDeliveryAddress(updated);
+      }
+    });
   }
 
   @override
@@ -672,6 +694,7 @@ class _AddressSheetState extends State<_AddressSheet> {
                       BulkOrderAddressSection(
                         showDeliveryTime: widget.showDeliveryTime,
                         deliveryTimeController: widget.showDeliveryTime ? _timeController : null,
+                        autoPopulateDeliveryTime: false,
                       ),
                       const SizedBox(height: 16),
                     ],
