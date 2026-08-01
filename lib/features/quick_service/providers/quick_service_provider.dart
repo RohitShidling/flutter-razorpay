@@ -70,6 +70,7 @@ class QuickServiceProvider with ChangeNotifier {
 
   Map<String, dynamic>? _specialConfig;
   Map<String, dynamic>? get specialConfig => _specialConfig;
+  int get specialMinLeadDays => (specialConfig?['min_lead_days'] as num?)?.toInt() ?? 0;
 
   Map<String, dynamic>? _todayMenu;
   Map<String, dynamic>? get todayMenu => _todayMenu;
@@ -416,7 +417,7 @@ class QuickServiceProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> paySpecialDishes() async {
+  Future<Map<String, dynamic>?> paySpecialDishes({String? deliveryDate}) async {
     if (_address == null || !_address!.isComplete) {
       _error = 'Please complete delivery address';
       notifyListeners();
@@ -431,11 +432,18 @@ class QuickServiceProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final paymentData = await _repository.initiateSpecialDishPayment({
+      final payload = <String, dynamic>{
         'items': _cartQty.entries.map((e) => {'item_id': e.key, 'quantity': e.value}).toList(),
         'delivery_address': _addressPayload(),
         'redirectUrl': ApiEndpoints.paymentStatusPage,
-      });
+      };
+      if (deliveryDate != null && deliveryDate.isNotEmpty) {
+        payload['delivery_date'] = deliveryDate;
+      }
+      if (_address?.deliveryTime != null && _address!.deliveryTime!.trim().isNotEmpty) {
+        payload['delivery_time'] = _address!.deliveryTime!.trim();
+      }
+      final paymentData = await _repository.initiateSpecialDishPayment(payload);
       final result = await _runRazorpay(paymentData);
       if (result != null && result['sdkStatus'] == 'SUCCESS') {
         _cartQty.clear();

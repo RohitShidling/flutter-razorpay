@@ -1478,22 +1478,75 @@ class FeatureQuickLinks extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final parentWidth = constraints.maxWidth;
-              final int columnsCount = parentWidth > 900 ? 4 : (parentWidth > 600 ? 3 : 2);
-              final double spacing = 12.0;
-              final double totalSpacing = (columnsCount - 1) * spacing;
-              final double cardWidth = (parentWidth - totalSpacing) / columnsCount;
+              const double spacing = 12.0;
+              final count = visibleCards.length;
 
-              return Wrap(
-                spacing: spacing,
-                runSpacing: spacing,
-                alignment: WrapAlignment.center,
-                children: visibleCards.map((card) {
-                  return SizedBox(
-                    width: cardWidth,
-                    child: card,
-                  );
-                }).toList(),
-              );
+              if (count == 0) return const SizedBox.shrink();
+
+              if (count == 1) {
+                return SizedBox(
+                  width: parentWidth,
+                  child: visibleCards[0],
+                );
+              }
+
+              if (count == 2) {
+                final cardW = (parentWidth - spacing) / 2;
+                return Row(
+                  children: [
+                    SizedBox(width: cardW, child: visibleCards[0]),
+                    const SizedBox(width: spacing),
+                    SizedBox(width: cardW, child: visibleCards[1]),
+                  ],
+                );
+              }
+
+              if (count == 3) {
+                final cardW = (parentWidth - spacing) / 2;
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(width: cardW, child: visibleCards[0]),
+                        const SizedBox(width: spacing),
+                        SizedBox(width: cardW, child: visibleCards[1]),
+                      ],
+                    ),
+                    const SizedBox(height: spacing),
+                    Center(
+                      child: SizedBox(
+                        width: parentWidth > 500 ? cardW : parentWidth,
+                        child: visibleCards[2],
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              final cardW = (parentWidth - spacing) / 2;
+              final List<Widget> rows = [];
+              for (int i = 0; i < count; i += 2) {
+                if (i + 1 < count) {
+                  rows.add(Row(
+                    children: [
+                      SizedBox(width: cardW, child: visibleCards[i]),
+                      const SizedBox(width: spacing),
+                      SizedBox(width: cardW, child: visibleCards[i + 1]),
+                    ],
+                  ));
+                } else {
+                  rows.add(Center(
+                    child: SizedBox(
+                      width: parentWidth > 500 ? cardW : parentWidth,
+                      child: visibleCards[i],
+                    ),
+                  ));
+                }
+                if (i + 2 < count) {
+                  rows.add(const SizedBox(height: spacing));
+                }
+              }
+              return Column(children: rows);
             },
           ),
         ],

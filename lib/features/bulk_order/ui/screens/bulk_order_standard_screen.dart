@@ -22,6 +22,8 @@ class BulkOrderStandardScreen extends StatefulWidget {
 class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
   String? _selectedDate;
   int _qty = 10;
+  late final TextEditingController _qtyController;
+  late final FocusNode _qtyFocusNode;
 
   @override
   void initState() {
@@ -29,6 +31,10 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
     final p = context.read<BulkOrderProvider>();
     final cfg = p.config;
     if (cfg != null) _qty = cfg.minQuantity;
+    _qtyController = TextEditingController(text: '$_qty');
+    _qtyFocusNode = FocusNode();
+    _qtyFocusNode.addListener(_onFocusChange);
+
     _selectedDate = p.standardDeliveryDate;
     if (_selectedDate != null && _selectedDate!.length >= 10) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -37,7 +43,53 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
     }
   }
 
-  int _maxQty(BulkOrderConfig cfg) => cfg.tierThreshold - 1;
+  void _onFocusChange() {
+    if (!_qtyFocusNode.hasFocus) {
+      _clampAndSyncQty();
+    }
+  }
+
+  void _clampAndSyncQty() {
+    final p = context.read<BulkOrderProvider>();
+    final cfg = p.config;
+    if (cfg == null) return;
+
+    final parsed = int.tryParse(_qtyController.text.trim());
+    if (parsed == null || parsed < cfg.minQuantity) {
+      setState(() {
+        _qty = cfg.minQuantity;
+        _qtyController.text = '${cfg.minQuantity}';
+      });
+      if (parsed != null && parsed < cfg.minQuantity) {
+        ErrorHandler.showValidationError(context, 'Minimum order is ${cfg.minQuantity} meals');
+      }
+      return;
+    }
+
+    int clamped = parsed;
+    if (clamped > cfg.standardMaxQuantity) {
+      clamped = cfg.standardMaxQuantity;
+      ErrorHandler.showValidationError(
+        context,
+        'Maximum for standard bulk is ${cfg.standardMaxQuantity} meals. For ${cfg.tierThreshold}+ meals, use large event bulk.',
+      );
+    }
+
+    setState(() {
+      _qty = clamped;
+      _qtyController.text = '$clamped';
+    });
+  }
+
+  @override
+  void dispose() {
+    _qtyFocusNode.removeListener(_onFocusChange);
+    _qtyFocusNode.dispose();
+    _qtyController.dispose();
+    super.dispose();
+  }
+
+  int _maxQty(BulkOrderConfig cfg) => cfg.standardMaxQuantity;
 
   Future<void> _pickDate(BulkOrderConfig cfg) async {
     final ymd = await pickBulkDeliveryDate(context, cfg, _selectedDate);
@@ -47,14 +99,27 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
   }
 
   void _increment(BulkOrderConfig cfg) {
-    if (_selectedDate != null && _qty < _maxQty(cfg)) setState(() => _qty++);
+    if (_selectedDate != null && _qty < _maxQty(cfg)) {
+      setState(() {
+        _qty++;
+        _qtyController.text = '$_qty';
+      });
+    }
   }
 
   void _decrement(BulkOrderConfig cfg) {
-    if (_selectedDate != null && _qty > cfg.minQuantity) setState(() => _qty--);
+    if (_selectedDate != null && _qty > cfg.minQuantity) {
+      setState(() {
+        _qty--;
+        _qtyController.text = '$_qty';
+      });
+    }
   }
 
   void _addToCart(BulkOrderProvider p, BulkOrderConfig cfg) {
+    _qtyFocusNode.unfocus();
+    _clampAndSyncQty();
+
     if (_selectedDate == null || _selectedDate!.length < 10) {
       ErrorHandler.showValidationError(context, 'Select a delivery date first');
       return;
@@ -255,7 +320,7 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
                   ),
                   bulkInfoBanner(
                     isDark: isDark,
-                    message: 'Order ${cfg.minQuantity} or more meals. For ${cfg.tierThreshold}+ meals use large event bulk.',
+                    message: 'Order ${cfg.minQuantity} to ${cfg.standardMaxQuantity} meals. For ${cfg.tierThreshold}+ meals use large event bulk.',
                   ),
                   const SizedBox(height: 20),
                   Text('Menu for selected date', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
@@ -301,40 +366,91 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
                             children: [
                               _StepperButton(
                                 icon: CupertinoIcons.minus,
-                                onTap: _qty > cfg.minQuantity ? () => _decrement(cfg) : null,
+                                onTap: _qty > cfg.minQuantity
+                                    ? () {
+                                        FocusScope.of(context).unfocus();
+                                        _decrement(cfg);
+                                      }
+                                    : null,
                               ),
-                              const SizedBox(width: 24),
+                              const SizedBox(width: 16),
                               Container(
-                                constraints: const BoxConstraints(minWidth: 80),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                width: 110,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: isDark ? AppTheme.surfaceDark : Colors.white,
-                                  borderRadius: BorderRadius.circular(24),
+                                  borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+                                    color: _qtyFocusNode.hasFocus
+                                        ? AppTheme.primaryColor
+                                        : (isDark ? AppTheme.borderDark : AppTheme.borderLight),
                                     width: 1.5,
                                   ),
                                 ),
-                                child: Text(
-                                  '$_qty',
+                                child: TextField(
+                                  controller: _qtyController,
+                                  focusNode: _qtyFocusNode,
+                                  keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
                                   style: TextStyle(
-                                    fontSize: 28,
+                                    fontSize: 26,
                                     fontWeight: FontWeight.w900,
                                     color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                                   ),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  onChanged: (val) {
+                                    if (val.isEmpty) return;
+                                    final parsed = int.tryParse(val.trim());
+                                    if (parsed != null) {
+                                      if (parsed > maxQty) {
+                                        _qtyController.text = '$maxQty';
+                                        _qtyController.selection = TextSelection.fromPosition(
+                                          TextPosition(offset: _qtyController.text.length),
+                                        );
+                                        setState(() {
+                                          _qty = maxQty;
+                                        });
+                                        ErrorHandler.showValidationError(
+                                          context,
+                                          'Maximum for standard bulk is $maxQty meals. For ${cfg.tierThreshold}+ meals, use large event bulk.',
+                                        );
+                                      } else {
+                                        setState(() {
+                                          _qty = parsed;
+                                        });
+                                      }
+                                    }
+                                  },
+                                  onSubmitted: (_) => _clampAndSyncQty(),
                                 ),
                               ),
-                              const SizedBox(width: 24),
+                              const SizedBox(width: 16),
                               _StepperButton(
                                 icon: CupertinoIcons.plus,
-                                onTap: _qty < maxQty ? () => _increment(cfg) : null,
+                                onTap: _qty < maxQty
+                                    ? () {
+                                        FocusScope.of(context).unfocus();
+                                        _increment(cfg);
+                                      }
+                                    : null,
                               ),
                             ],
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            'Min ${cfg.minQuantity} · Below ${cfg.tierThreshold}',
+                            'Min ${cfg.minQuantity} · Max ${cfg.standardMaxQuantity}',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
                           ),
                         ],

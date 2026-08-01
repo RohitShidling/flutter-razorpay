@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/providers/lookup_provider.dart';
@@ -10,6 +11,7 @@ import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_secti
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
+import 'package:meal_app/core/utils/delivery_time_window.dart';
 
 class QuickServiceCheckout {
   QuickServiceCheckout._();
@@ -112,7 +114,7 @@ class QuickServiceCheckout {
       builder: (ctx) => _AddressSheet(
         title: deliveryType == 'today' ? 'Order for today' : 'Order for tomorrow',
         showDeliveryTime: true,
-        onConfirm: () => Navigator.pop(ctx, true),
+        onConfirm: (_) => Navigator.pop(ctx, true),
       ),
     );
     if (confirmed != true || !context.mounted) return;
@@ -223,6 +225,8 @@ class QuickServiceCheckout {
     BuildContext context, {
     bool skipAddressPrompt = false,
   }) async {
+    await context.read<QuickServiceProvider>().loadSpecialConfig();
+    if (!context.mounted) return;
     if (!skipAddressPrompt) {
       await _hydrateSavedAddress(context);
       if (!context.mounted) return;
@@ -239,28 +243,29 @@ class QuickServiceCheckout {
       return;
     }
 
-    final confirmed = await showModalBottomSheet<bool>(
+    final selectedDate = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
       builder: (ctx) => _AddressSheet(
-        title: 'Confirm delivery address',
+        title: 'Confirm delivery details',
         showDeliveryTime: true,
-        onConfirm: () => Navigator.pop(ctx, true),
+        showDeliveryDate: true,
+        onConfirm: (dateStr) => Navigator.pop(ctx, dateStr ?? ''),
       ),
     );
-    if (confirmed != true || !context.mounted) return;
+    if (selectedDate == null || !context.mounted) return;
 
-    await _completeSpecialDishes(context);
+    await _completeSpecialDishes(context, deliveryDate: selectedDate);
   }
 
-  static Future<void> _completeSpecialDishes(BuildContext context) async {
+  static Future<void> _completeSpecialDishes(BuildContext context, {String? deliveryDate}) async {
     final bulk = context.read<BulkOrderProvider>();
     final provider = context.read<QuickServiceProvider>();
     provider.setAddress(bulk.deliveryAddress);
 
-    final result = await provider.paySpecialDishes();
+    final result = await provider.paySpecialDishes(deliveryDate: deliveryDate);
     if (!context.mounted) return;
 
     if (result != null) {
@@ -345,7 +350,6 @@ class _OneDayLunchSheet extends StatefulWidget {
 class _OneDayLunchSheetState extends State<_OneDayLunchSheet> {
   String _deliveryType = 'today';
   int? _mealSizeId;
-  int _quantity = 1;
   final _timeController = TextEditingController();
 
   @override
@@ -456,45 +460,6 @@ class _OneDayLunchSheetState extends State<_OneDayLunchSheet> {
                 }).toList(),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Quantity', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove),
-                          onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          padding: EdgeInsets.zero,
-                          iconSize: 18,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            '$_quantity',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () => setState(() => _quantity++),
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          padding: EdgeInsets.zero,
-                          iconSize: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
               BulkOrderAddressSection(
                 showDeliveryTime: true,
                 deliveryTimeController: _timeController,
@@ -526,7 +491,7 @@ class _OneDayLunchSheetState extends State<_OneDayLunchSheet> {
                         deliveryType: _deliveryType,
                         mealSizeId: mealSizeId,
                         deliveryTime: _timeController.text.trim(),
-                        quantity: _quantity,
+                        quantity: 1,
                       ),
                     );
                   },
@@ -590,11 +555,13 @@ class _AddressSheet extends StatefulWidget {
     required this.title,
     required this.onConfirm,
     this.showDeliveryTime = false,
+    this.showDeliveryDate = false,
   });
 
   final String title;
-  final VoidCallback onConfirm;
+  final ValueChanged<String?> onConfirm;
   final bool showDeliveryTime;
+  final bool showDeliveryDate;
 
   @override
   State<_AddressSheet> createState() => _AddressSheetState();
@@ -602,6 +569,7 @@ class _AddressSheet extends StatefulWidget {
 
 class _AddressSheetState extends State<_AddressSheet> {
   final _timeController = TextEditingController();
+  String? _selectedDate;
 
   @override
   void initState() {
@@ -640,6 +608,7 @@ class _AddressSheetState extends State<_AddressSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final lookup = context.watch<LookupProvider>();
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
@@ -691,11 +660,170 @@ class _AddressSheetState extends State<_AddressSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // 1. Delivery Address section
                       BulkOrderAddressSection(
-                        showDeliveryTime: widget.showDeliveryTime,
-                        deliveryTimeController: widget.showDeliveryTime ? _timeController : null,
+                        showDeliveryTime: widget.showDeliveryDate ? false : widget.showDeliveryTime,
+                        deliveryTimeController: (!widget.showDeliveryDate && widget.showDeliveryTime) ? _timeController : null,
                         autoPopulateDeliveryTime: false,
                       ),
+
+                      // 2. Delivery Date (placed directly above Delivery Time for Buuttii Specials)
+                      if (widget.showDeliveryDate) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Delivery Date *',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () async {
+                            final now = DateTime.now();
+                            final minLeadDays = context.read<QuickServiceProvider>().specialMinLeadDays;
+                            final earliestDate = now.add(Duration(days: minLeadDays));
+                            final firstDate = DateTime(earliestDate.year, earliestDate.month, earliestDate.day);
+                            final todayZero = DateTime(now.year, now.month, now.day);
+                            final lastDate = todayZero.add(const Duration(days: 60));
+
+                            DateTime initialDate = firstDate;
+                            if (_selectedDate != null && _selectedDate!.isNotEmpty) {
+                              final parsed = DateTime.tryParse(_selectedDate!);
+                              if (parsed != null && !parsed.isBefore(firstDate)) {
+                                initialDate = parsed;
+                              }
+                            }
+
+                            if (initialDate.weekday == DateTime.sunday) {
+                              initialDate = initialDate.add(const Duration(days: 1));
+                            }
+
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: initialDate,
+                              firstDate: firstDate,
+                              lastDate: lastDate,
+                              selectableDayPredicate: (date) => date.weekday != DateTime.sunday && !date.isBefore(firstDate),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _selectedDate = DateFormat('yyyy-MM-dd').format(picked);
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppTheme.surfaceDark : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(CupertinoIcons.calendar, color: AppTheme.primaryColor, size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _selectedDate != null && _selectedDate!.isNotEmpty
+                                        ? _selectedDate!
+                                        : 'Select Delivery Date',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: _selectedDate != null && _selectedDate!.isNotEmpty
+                                          ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
+                                          : Colors.grey.shade600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                                Icon(
+                                  CupertinoIcons.chevron_down,
+                                  size: 16,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // 3. Delivery Time (placed directly below Delivery Date for Buuttii Specials)
+                      if (widget.showDeliveryDate && widget.showDeliveryTime) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Delivery Time *',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _timeController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            hintText: DeliveryTimeWindow.hint(lookup.deliveryTimeSettings) ??
+                                'Select preferred delivery time',
+                            helperText: DeliveryTimeWindow.hint(lookup.deliveryTimeSettings),
+                            helperMaxLines: 2,
+                            prefixIcon: const Icon(Icons.access_time, color: AppTheme.primaryColor),
+                            suffixIcon: Icon(CupertinoIcons.chevron_down, size: 16, color: Colors.grey.shade500),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: isDark ? AppTheme.borderDark : AppTheme.borderLight, width: 1.5),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: isDark ? AppTheme.borderDark : AppTheme.borderLight, width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                            ),
+                          ),
+                          onTap: () async {
+                            if (lookup.deliveryTimeSettings == null) {
+                              await lookup.fetchDeliveryTimeSettings();
+                              if (!context.mounted) return;
+                            }
+                            final window = lookup.deliveryTimeSettings;
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                            );
+                            if (picked == null || !context.mounted) return;
+                            if (!DeliveryTimeWindow.allows(picked, window)) {
+                              ErrorHandler.showError(context, DeliveryTimeWindow.message(window));
+                              return;
+                            }
+                            final formattedTime = MaterialLocalizations.of(context).formatTimeOfDay(picked);
+                            setState(() {
+                              _timeController.text = formattedTime;
+                            });
+                            final selected = context.read<BulkOrderProvider>().deliveryAddress;
+                            if (selected != null) {
+                              final updated = BulkDeliveryAddress(
+                                id: selected.id,
+                                label: selected.label,
+                                stateId: selected.stateId,
+                                cityId: selected.cityId,
+                                addressLine: selected.addressLine,
+                                pincode: selected.pincode,
+                                stateName: selected.stateName,
+                                cityName: selected.cityName,
+                                isDefault: selected.isDefault,
+                                deliveryTime: formattedTime,
+                                phoneNumber: selected.phoneNumber,
+                                altPhoneNumber: selected.altPhoneNumber,
+                                customerName: selected.customerName,
+                              );
+                              context.read<BulkOrderProvider>().setDeliveryAddress(updated);
+                            }
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -707,18 +835,60 @@ class _AddressSheetState extends State<_AddressSheet> {
                   height: 48,
                   child: ElevatedButton(
                     onPressed: () {
-                      final err = context.read<BulkOrderProvider>().validateDeliveryAddress(
-                        requireTime: widget.showDeliveryTime,
+                      final provider = context.read<BulkOrderProvider>();
+                      final err = provider.validateDeliveryAddress(
+                        requireTime: false,
                       );
                       if (err != null) {
                         ErrorHandler.showError(context, err);
                         return;
                       }
-                      if (widget.showDeliveryTime && _timeController.text.trim().isEmpty) {
-                        ErrorHandler.showError(context, 'Select a delivery time.');
-                        return;
+
+                      if (widget.showDeliveryDate) {
+                        final hasDate = _selectedDate != null && _selectedDate!.trim().isNotEmpty;
+                        final hasTime = _timeController.text.trim().isNotEmpty;
+
+                        if (!hasDate && !hasTime) {
+                          ErrorHandler.showError(context, 'Please select both delivery date and delivery time.');
+                          return;
+                        }
+                        if (!hasDate) {
+                          ErrorHandler.showError(context, 'Please select a delivery date.');
+                          return;
+                        }
+                        if (!hasTime) {
+                          ErrorHandler.showError(context, 'Please select a delivery time.');
+                          return;
+                        }
+                      } else if (widget.showDeliveryTime) {
+                        if (_timeController.text.trim().isEmpty) {
+                          ErrorHandler.showError(context, 'Please select a delivery time.');
+                          return;
+                        }
                       }
-                      widget.onConfirm();
+
+                      final timeText = _timeController.text.trim();
+                      final selectedAddr = provider.deliveryAddress;
+                      if (selectedAddr != null && timeText.isNotEmpty) {
+                        final updated = BulkDeliveryAddress(
+                          id: selectedAddr.id,
+                          label: selectedAddr.label,
+                          stateId: selectedAddr.stateId,
+                          cityId: selectedAddr.cityId,
+                          addressLine: selectedAddr.addressLine,
+                          pincode: selectedAddr.pincode,
+                          stateName: selectedAddr.stateName,
+                          cityName: selectedAddr.cityName,
+                          isDefault: selectedAddr.isDefault,
+                          deliveryTime: timeText,
+                          phoneNumber: selectedAddr.phoneNumber,
+                          altPhoneNumber: selectedAddr.altPhoneNumber,
+                          customerName: selectedAddr.customerName,
+                        );
+                        provider.setDeliveryAddress(updated);
+                      }
+
+                      widget.onConfirm(_selectedDate);
                     },
                     child: const Text('Continue to payment', style: TextStyle(fontWeight: FontWeight.w800)),
                   ),

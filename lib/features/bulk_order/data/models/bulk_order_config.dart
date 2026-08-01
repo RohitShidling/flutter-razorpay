@@ -1,5 +1,6 @@
 class BulkOrderConfig {
   final int minQuantity;
+  final int standardMaxQuantity;
   final int minLeadDays;
   final int tierThreshold;
   final double pricePerMealUnderThreshold;
@@ -20,8 +21,11 @@ class BulkOrderConfig {
   final String? varietyTierSubtitle;
   final String? varietyTierDescription;
 
+  String get effectiveStandardSubtitle => '$minQuantity–$standardMaxQuantity meals';
+
   BulkOrderConfig({
     required this.minQuantity,
+    required this.standardMaxQuantity,
     required this.minLeadDays,
     required this.tierThreshold,
     required this.pricePerMealUnderThreshold,
@@ -47,8 +51,10 @@ class BulkOrderConfig {
     final prices = json['variety_prices'];
     final minQ = int.tryParse('${json['min_quantity'] ?? 10}') ?? 10;
     final tier = int.tryParse('${json['tier_threshold'] ?? 50}') ?? 50;
+    final stdMax = int.tryParse('${json['standard_max_quantity'] ?? (tier - 1)}') ?? (tier - 1);
     return BulkOrderConfig(
       minQuantity: minQ,
+      standardMaxQuantity: stdMax,
       minLeadDays: int.tryParse('${json['min_lead_days'] ?? 3}') ?? 3,
       tierThreshold: tier,
       pricePerMealUnderThreshold:

@@ -151,9 +151,7 @@ class _BulkOrderHubScreenState extends State<BulkOrderHubScreen> {
                                       title: cfg.standardTierTitle?.isNotEmpty == true
                                           ? cfg.standardTierTitle!
                                           : 'Standard bulk',
-                                      subtitle: cfg.standardTierSubtitle?.isNotEmpty == true
-                                          ? cfg.standardTierSubtitle!
-                                          : '${cfg.minQuantity}+ meals',
+                                      subtitle: cfg.effectiveStandardSubtitle,
                                       detail: cfg.standardTierDescription?.isNotEmpty == true
                                           ? cfg.standardTierDescription!
                                           : 'One meal for your delivery date — the same dish for everyone.',
