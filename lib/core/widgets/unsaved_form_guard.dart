@@ -19,12 +19,12 @@ class UnsavedFormGuard extends StatelessWidget {
     final result = await showCupertinoDialog<String>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
-        title: const Text('Unsaved changes'),
-        content: const Text('You have unsaved changes. What would you like to do?'),
+        title: const Text('Discard Changes?'),
+        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(ctx, 'cancel'),
-            child: const Text('Cancel'),
+            child: const Text('Keep Editing'),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,

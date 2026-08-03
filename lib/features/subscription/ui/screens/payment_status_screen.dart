@@ -399,7 +399,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
 
   Widget _buildSuccessUI(bool isDark) {
     final data = _statusData!;
-    final transactionId = data['transactionId']?.toString() ?? widget.txnId;
+    // final transactionId = data['transactionId']?.toString() ?? widget.txnId;
     final amountPaid = data['amountPaid']?.toString() ?? '0';
     final orderType = data['orderType']?.toString() ?? '';
     final entityName = data['entityName']?.toString() ?? '';
@@ -461,7 +461,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           AppleCard(
             child: Column(
               children: [
-                _buildStatusRow('Transaction ID', transactionId, isDark),
+                // _buildStatusRow('Transaction ID', transactionId, isDark),
                 _buildStatusRow('Amount Paid', '₹$amountPaid', isDark),
                 if (paymentTime.isNotEmpty)
                   _buildStatusRow('Payment Date/Time', paymentTime, isDark),

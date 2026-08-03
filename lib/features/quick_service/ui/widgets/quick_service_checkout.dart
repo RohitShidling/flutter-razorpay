@@ -464,6 +464,7 @@ class _OneDayLunchSheetState extends State<_OneDayLunchSheet> {
                 showDeliveryTime: true,
                 deliveryTimeController: _timeController,
                 autoPopulateDeliveryTime: false,
+                isStandardRequired: false,
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -665,6 +666,7 @@ class _AddressSheetState extends State<_AddressSheet> {
                         showDeliveryTime: widget.showDeliveryDate ? false : widget.showDeliveryTime,
                         deliveryTimeController: (!widget.showDeliveryDate && widget.showDeliveryTime) ? _timeController : null,
                         autoPopulateDeliveryTime: false,
+                        isStandardRequired: false,
                       ),
 
                       // 2. Delivery Date (placed directly above Delivery Time for Buuttii Specials)
