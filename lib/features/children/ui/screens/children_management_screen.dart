@@ -823,27 +823,23 @@ class _ChildFormState extends State<_ChildForm> {
                       final leave = await showCupertinoDialog<String>(
                         context: context,
                         builder: (ctx) => CupertinoAlertDialog(
-                          title: const Text('Unsaved changes'),
-                          content: const Text('You have unsaved changes. What would you like to do?'),
+                          title: const Text('Discard Changes?'),
+                          content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
                           actions: [
-                            CupertinoDialogAction(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('Cancel')),
                             CupertinoDialogAction(
-                              isDestructiveAction: true,
-                              onPressed: () => Navigator.pop(ctx, 'discard'),
-                              child: const Text('Discard'),
+                              child: const Text('Keep Editing'),
+                              onPressed: () => Navigator.pop(ctx, 'keep'),
                             ),
                             CupertinoDialogAction(
-                              isDefaultAction: true,
-                              onPressed: () => Navigator.pop(ctx, 'save'),
-                              child: const Text('Save'),
+                              isDestructiveAction: true,
+                              child: const Text('Discard'),
+                              onPressed: () => Navigator.pop(ctx, 'discard'),
                             ),
                           ],
                         ),
                       );
-                      if (leave == 'discard' && context.mounted) Navigator.pop(context);
-                      if (leave == 'save' && context.mounted) {
-                        final ok = await _submitForm();
-                        if (ok && context.mounted) Navigator.pop(context);
+                      if (leave == 'discard' && context.mounted) {
+                        Navigator.pop(context);
                       }
                     },
                   ),
@@ -1236,7 +1232,6 @@ class _ChildFormState extends State<_ChildForm> {
     return UnsavedFormGuard(
       isDirty: _isDirty,
       onDiscard: () {},
-      onSave: _submitForm,
       child: formBody,
     );
   }

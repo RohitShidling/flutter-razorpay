@@ -54,7 +54,7 @@ class QuickServiceProvider with ChangeNotifier {
 
   bool _isSpecialConfigFresh() =>
       _lastSpecialConfigFetchedAt != null &&
-      DateTime.now().difference(_lastSpecialConfigFetchedAt!).inHours < 6;
+      DateTime.now().difference(_lastSpecialConfigFetchedAt!).inMinutes < 2;
 
   bool _isItemsFresh(String categoryId) {
     final t = _lastItemsFetchedAt[categoryId];
@@ -197,7 +197,7 @@ class QuickServiceProvider with ChangeNotifier {
     try {
       _specialConfig = await _repository.getSpecialDishConfig();
       _lastSpecialConfigFetchedAt = DateTime.now();
-      await CacheStore.setJson('special_dish_config', _specialConfig, ttl: const Duration(hours: 6));
+      await CacheStore.setJson('special_dish_config', _specialConfig, ttl: const Duration(minutes: 2));
       _error = null;
     } catch (e) {
       if (_specialConfig == null) {

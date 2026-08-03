@@ -21,11 +21,13 @@ class BulkOrderAddressSection extends StatefulWidget {
     this.showDeliveryTime = false,
     this.deliveryTimeController,
     this.autoPopulateDeliveryTime = true,
+    this.isStandardRequired = true,
   });
 
   final bool showDeliveryTime;
   final TextEditingController? deliveryTimeController;
   final bool autoPopulateDeliveryTime;
+  final bool isStandardRequired;
 
   @override
   State<BulkOrderAddressSection> createState() =>
@@ -70,6 +72,7 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
         existingAddress: address,
         showDeliveryTime: widget.showDeliveryTime,
         deliveryTimeController: _deliveryTimeController,
+        isStandardRequired: widget.isStandardRequired,
         onSaved: (saved) {
           // After saving, mark the new address as selected in the provider
           final provider = context.read<BulkOrderProvider>();
@@ -598,12 +601,14 @@ class _AddressFormSheet extends StatefulWidget {
     required this.showDeliveryTime,
     required this.deliveryTimeController,
     required this.onSaved,
+    this.isStandardRequired = true,
   });
 
   final BulkDeliveryAddress? existingAddress;
   final bool showDeliveryTime;
   final TextEditingController deliveryTimeController;
   final void Function(BulkDeliveryAddress saved) onSaved;
+  final bool isStandardRequired;
 
   @override
   State<_AddressFormSheet> createState() => _AddressFormSheetState();
@@ -740,14 +745,16 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
         lookup.schools.any((s) =>
             allowedAddress.addressLine.toLowerCase().contains(s.name.toLowerCase()));
 
-    if (isSchoolSelected && _selectedStandard == null) {
+    if (widget.isStandardRequired && isSchoolSelected && _selectedStandard == null) {
       setState(() => _formError = 'Standard (class) is required for school delivery.');
       return;
     }
 
     String line = allowedAddress.addressLine;
-    if (isSchoolSelected && _selectedStandard != null) {
-      line += ", Standard: ${_selectedStandard!.displayName}";
+    if (isSchoolSelected) {
+      if (_selectedStandard != null) {
+        line += ", Standard: ${_selectedStandard!.displayName}";
+      }
       final div = _divisionController.text.trim();
       if (div.isNotEmpty) {
         line += ", Div: $div";
@@ -1018,12 +1025,13 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                         children: [
                           const SizedBox(height: 16),
                           SearchableDropdown<StandardModel>(
-                            label: 'Standard',
+                            label: widget.isStandardRequired ? 'Standard *' : 'Standard (Optional)',
                             items: lookup.standards,
                             itemLabel: (s) => s.displayName,
                             value: _selectedStandard,
                             isLoading: lookup.isLoading,
                             listenable: lookup,
+                            showClear: !widget.isStandardRequired,
                             itemsGetter: () => lookup.standards,
                             loadingGetter: () => lookup.isLoading,
                             onInteraction: () {

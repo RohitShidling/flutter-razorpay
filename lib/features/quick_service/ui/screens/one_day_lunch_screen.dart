@@ -488,6 +488,7 @@ class _OneDayLunchBody extends StatelessWidget {
                 showDeliveryTime: true,
                 autoPopulateDeliveryTime: false,
                 deliveryTimeController: deliveryTimeController,
+                isStandardRequired: false,
               ),
               const SizedBox(height: 20),
 

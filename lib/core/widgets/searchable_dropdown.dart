@@ -21,6 +21,7 @@ class SearchableDropdown<T> extends StatefulWidget {
   final FormFieldSetter<T> onChanged;
   final FormFieldValidator<T>? validator;
   final bool enabled;
+  final bool showClear;
 
   const SearchableDropdown({
     super.key,
@@ -37,6 +38,7 @@ class SearchableDropdown<T> extends StatefulWidget {
     this.itemsGetter,
     this.loadingGetter,
     this.enabled = true,
+    this.showClear = false,
   });
 
   @override
@@ -126,6 +128,23 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                         ),
                       ),
                     ),
+                    if (state.value != null && widget.enabled && widget.showClear) ...[
+                      GestureDetector(
+                        onTap: () {
+                          state.didChange(null);
+                          widget.onChanged(null);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Icon(
+                            CupertinoIcons.clear_circled_solid,
+                            color: isDark ? Colors.white54 : Colors.grey.shade600,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
                     if (widget.isLoading)
                       const SizedBox(
                         width: 20,

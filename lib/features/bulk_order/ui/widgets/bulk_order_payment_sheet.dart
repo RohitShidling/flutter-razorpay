@@ -337,7 +337,7 @@ class _BulkOrderPaymentSheetState extends State<BulkOrderPaymentSheet> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    const BulkOrderAddressSection(),
+                    const BulkOrderAddressSection(isStandardRequired: false),
                   ],
                 ),
               ),
